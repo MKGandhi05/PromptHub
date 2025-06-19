@@ -1,161 +1,279 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import ModelSelectGrid from './ModelSelectGrid';
-import PromptForm from './PromptForm';
-import ResponseGrid from './ResponseGrid';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import openaiLogo from '../assets/openai.png';
+import azureLogo from '../assets/azure.png';
+
+const MODELS = [
+	{
+		provider: 'openai',
+		label: 'GPT-4o',
+		description: 'Fast, intelligent, flexible GPT model',
+		bg: 'linear-gradient(120deg, #6ee7b7 0%, #3b82f6 100%)',
+		textColor: '#fff',
+	},
+	{
+		provider: 'openai',
+		label: 'o4 – mini',
+		description: 'Faster, more affordable reasoning model',
+		bg: 'linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)',
+		textColor: '#222',
+	},
+	{
+		provider: 'openai',
+		label: 'GPT-4.1 -mini',	
+		description: 'Balanced for intelligence, speed, and cost',
+		bg: 'linear-gradient(120deg, #60a5fa 0%, #a7f3d0 100%)',
+		textColor: '#fff',
+	},
+	{
+		provider: 'azure',
+		label: 'GPT-4o',
+		description: 'Fast, intelligent, flexible GPT model',
+		bg: 'linear-gradient(120deg, #6ee7b7 0%, #3b82f6 100%)',
+		textColor: '#fff',
+	},
+	{
+		provider: 'azure',
+		label: 'o4 – mini',
+		description: 'Faster, more affordable reasoning model',
+		bg: 'linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)',
+		textColor: '#222',
+	},
+];
 
 export default function Playground() {
-  const [prompt, setPrompt] = useState('');
-  const [responses, setResponses] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [selectedModels, setSelectedModels] = useState([]);
-  const [showResponse, setShowResponse] = useState(false);
+	const [selectedModels, setSelectedModels] = useState([]);
+	const navigate = useNavigate();
 
-  const handleSelectModel = (model) => {
-    setSelectedModels(prev => {
-      const exists = prev.some(
-        (m) => m.provider === model.provider && m.label === model.label
-      );
-      if (exists) {
-        return prev.filter(
-          (m) => !(m.provider === model.provider && m.label === model.label)
-        );
-      } else {
-        return [...prev, model];
-      }
-    });
-  };
+	const handleSelectModel = (model) => {
+		setSelectedModels((prev) => {
+			const exists = prev.some(
+				(m) => m.provider === model.provider && m.label === model.label
+			);
+			if (exists) {
+				return prev.filter(
+					(m) => !(m.provider === model.provider && m.label === model.label)
+				);
+			} else {
+				if (prev.length >= 5) return prev; // Max 5 models
+				return [...prev, model];
+			}
+		});
+	};
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    setError('');
-    setResponses({});
-    setLoading(true);
-    setTimeout(async () => {
-      setShowResponse(true);
-      try {
-        const res = await fetch('http://localhost:8000/api/prompts/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: prompt, models: selectedModels })
-        });
-        if (!res.ok) throw new Error('Failed to fetch response');
-        const data = await res.json();
-        setResponses(data.responses || {});
-      } catch (err) {
-        setError('Something went wrong.');
-      } finally {
-        setLoading(false);
-      }
-    }, 400);
-  };
+	const handleCompare = () => {
+		// Save selected models to localStorage for session page
+		localStorage.setItem('selectedModels', JSON.stringify(selectedModels));
+		navigate('/playground/session');
+	};
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100">
-        <div className="container-custom h-16 flex items-center justify-between">
-          <Link to="/" className="gradient-text text-2xl font-bold font-poppins">
-            PromptHUB
-          </Link>
-          <a 
-            href="https://github.com/yourusername/prompthub" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="btn btn-secondary"
-          >
-            GitHub
-          </a>
-        </div>
-      </nav>
+	// ModelCard inlined
+	const ModelCard = ({
+		model,
+		provider,
+		selected,
+		onSelect,
+		interactive,
+		description,
+		bg,
+		textColor,
+	}) => {
+		const logo = provider === 'openai' ? openaiLogo : azureLogo;
+		return (
+			<div
+				onClick={() => interactive && onSelect()}
+				style={{
+					position: 'relative',
+					border: selected ? '2px solid #2563eb' : '2px solid transparent',
+					borderRadius: 16,
+					margin: 8,
+					background: '#18181b',
+					cursor: 'pointer',
+					minWidth: 320,
+					maxWidth: 340,
+					minHeight: 180,
+					boxShadow: selected ? '0 6px 32px 0 #2563eb22' : '0 2px 12px 0 #0001',
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					justifyContent: 'flex-start',
+					transition: 'box-shadow 0.2s, border 0.2s, background 0.2s',
+				}}
+			>
+				<img
+					src={logo}
+					alt={provider + ' logo'}
+					style={{
+						position: 'absolute',
+						top: 12,
+						left: 12,
+						width: 28,
+						height: 28,
+						zIndex: 2,
+						objectFit: 'contain',
+					}}
+				/>
+				<div
+					style={{
+						width: '100%',
+						height: 100,
+						borderRadius: 12,
+						background: bg,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						marginBottom: 16,
+					}}
+				>
+					<span
+						style={{
+							color: textColor,
+							fontWeight: 800,
+							fontSize: 32,
+							letterSpacing: 1,
+							textShadow: '0 2px 8px #0002',
+						}}
+					>
+						{model.replace(' -mini', ' mini')}
+					</span>
+				</div>
+				<div
+					style={{
+						color: '#cbd5e1',
+						fontSize: 16,
+						textAlign: 'center',
+						marginBottom: 8,
+						minHeight: 44,
+					}}
+				>
+					{description}
+				</div>
+			</div>
+		);
+	};
 
-      {/* Main Content */}
-      <main className="container-custom pt-24 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12 text-center"
-        >
-          <h1 className="h2 mb-4 gradient-text">
-            AI Model Playground
-          </h1>
-          <p className="body-large text-gray-600 max-w-2xl mx-auto">
-            Select models and start comparing their responses to your prompts.
-          </p>
-        </motion.div>
+	// ModelSelectGrid inlined
+	const ModelSelectGrid = ({ selectedModels, onSelect }) => {
+		return (
+			<div
+				style={{
+					display: 'grid',
+					gridTemplateColumns: 'repeat(3, 1fr)',
+					gridTemplateRows: 'repeat(2, 1fr)',
+					gap: 32,
+					marginBottom: 24,
+					width: '100%',
+					maxWidth: 1050,
+					minHeight: 420,
+					alignItems: 'center',
+					justifyItems: 'center',
+				}}
+			>
+				{MODELS.map((model, idx) => (
+					<ModelCard
+						key={`${model.provider}-${model.label}`}
+						model={model.label}
+						provider={model.provider}
+						selected={selectedModels.some(
+							(m) => m.provider === model.provider && m.label === model.label
+						)}
+						onSelect={() => onSelect(model)}
+						interactive={true}
+						description={model.description}
+						bg={model.bg}
+						textColor={model.textColor}
+						style={{
+							gridColumn: (idx % 3) + 1,
+							gridRow: Math.floor(idx / 3) + 1,
+						}}
+					/>
+				))}
+			</div>
+		);
+	};
 
-        <AnimatePresence mode="wait">
-          {!showResponse ? (
-            <motion.div
-              key="input"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-12"
-            >
-              <ModelSelectGrid 
-                selectedModels={selectedModels} 
-                onSelect={handleSelectModel} 
-              />
-              <PromptForm
-                prompt={prompt}
-                setPrompt={setPrompt}
-                onSend={handleSend}
-                loading={loading}
-                disabled={selectedModels.length === 0}
-                sendDisabled={selectedModels.length === 0 || !prompt.trim()}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="response"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
-            >
-              <div className="flex justify-between items-center">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowResponse(false)}
-                  className="btn btn-secondary"
-                >
-                  ← Back to Prompt
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    setPrompt('');
-                    setResponses({});
-                    setShowResponse(false);
-                  }}
-                  className="btn btn-primary"
-                >
-                  New Prompt
-                </motion.button>
-              </div>
-              <ResponseGrid 
-                selectedModels={selectedModels.map(m => `${m.provider}-${m.label}`)}
-                responses={responses}
-                loading={loading}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg"
-          >
-            {error}
-          </motion.div>
-        )}
-      </main>
-    </div>
-  );
+	return (
+		<div
+			style={{
+				minHeight: '100vh',
+				height: '100vh',
+				background: '#18181b',
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'center',
+				overflow: 'hidden',
+			}}
+		>
+			<main
+				style={{
+					width: '100%',
+					maxWidth: 1100,
+					margin: '0 auto',
+					background: 'rgba(255,255,255,0.04)',
+					borderRadius: 24,
+					boxShadow: '0 8px 40px 0 #0002',
+					padding: '48px 24px',
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					height: '90vh',
+					overflow: 'hidden',
+				}}
+			>
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+				>
+					<h1
+						style={{
+							color: 'white',
+							fontSize: '2.5rem',
+							fontWeight: 900,
+							textAlign: 'center',
+							marginBottom: 32,
+							letterSpacing: 1,
+						}}
+					>
+						Select Models to Compare
+					</h1>
+					<ModelSelectGrid
+						selectedModels={selectedModels}
+						onSelect={handleSelectModel}
+					/>
+					<div
+						style={{
+							display: 'flex',
+							justifyContent: 'center',
+							marginTop: 40,
+						}}
+					>
+						<button
+							onClick={handleCompare}
+							disabled={selectedModels.length === 0}
+							style={{
+								padding: '18px 48px',
+								fontSize: '1.35rem',
+								fontWeight: 700,
+								borderRadius: 14,
+								background:
+									selectedModels.length === 0
+										? '#b0b0b0'
+										: 'linear-gradient(90deg, #2563eb 60%, #0ea5e9 100%)',
+								color: 'white',
+								border: 'none',
+								boxShadow: '0 8px 32px 0 rgba(31,38,135,0.17)',
+								cursor:
+									selectedModels.length === 0 ? 'not-allowed' : 'pointer',
+								transition: 'background 0.2s',
+								letterSpacing: 1,
+							}}
+						>
+							Compare
+						</button>
+					</div>
+				</motion.div>
+			</main>
+		</div>
+	);
 }

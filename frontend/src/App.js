@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import Playground from './components/Playground';
+import PlaygroundSession from './components/PlaygroundSession';
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
@@ -54,28 +55,22 @@ export default function App() {
 
   return (
     <Router>
-      <div className="min-h-screen w-full flex flex-col items-center justify-start bg-neutral-900">
-        <div className="w-full max-w-7xl mt-8 px-2">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-center text-white mb-8 tracking-tight drop-shadow-lg font-poppins">PromptHUB : Multi LLM Playground</h1>
+      <div>
+        <div>
           <Routes>
             <Route path="/" element={
-              <div className="transition-opacity duration-400 opacity-100 animate-fade-in">
+              <div>
                 <LandingPage />
               </div>
             } />
             <Route path="/playground" element={
-              <div className="transition-opacity duration-400 opacity-100 animate-fade-in">
-                <Playground
-                  selectedModels={selectedModels}
-                  onSelectModel={handleSelectModel}
-                  prompt={prompt}
-                  setPrompt={setPrompt}
-                  onSend={handleSend}
-                  loading={loading}
-                  error={error}
-                  responses={responses}
-                  showResponse={showResponse}
-                />
+              <div>
+                <Playground />
+              </div>
+            } />
+            <Route path="/playground/session" element={
+              <div>
+                <PlaygroundSessionWrapper />
               </div>
             } />
           </Routes>
@@ -83,4 +78,14 @@ export default function App() {
       </div>
     </Router>
   );
+}
+
+function PlaygroundSessionWrapper() {
+  let selectedModels = [];
+  try {
+    selectedModels = JSON.parse(localStorage.getItem('selectedModels')) || [];
+  } catch {
+    selectedModels = [];
+  }
+  return <PlaygroundSession selectedModels={selectedModels} />;
 }
