@@ -105,9 +105,32 @@ export default function PlaygroundSession({ selectedModels }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f2027 0%, #2c5364 60%, #00c6ff 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 900 }}>
-        <h2 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, marginBottom: 24 }}>Playground Session</h2>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f2027 0%, #2c5364 60%, #00c6ff 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'Inter, Segoe UI, Arial, sans-serif'
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 950,
+        margin: '0 auto',
+        padding: '40px 0'
+      }}>
+        <h2 style={{
+          color: 'white',
+          fontSize: '2.2rem',
+          fontWeight: 900,
+          marginBottom: 32,
+          textAlign: 'center',
+          letterSpacing: 0.5,
+          textShadow: '0 2px 8px #0006'
+        }}>
+          Playground Session
+        </h2>
         <PromptForm
           prompt={prompt}
           setPrompt={setPrompt}
