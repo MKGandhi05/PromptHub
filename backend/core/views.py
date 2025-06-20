@@ -26,7 +26,7 @@ class PromptListCreateView(APIView):
                 {"provider": "openai", "label": "GPT-4.1 -mini"},
                 {"provider": "azure", "label": "GPT-4o"},
                 {"provider": "azure", "label": "o4 – mini"},
-                {"provider": "azure", "label": "GPT-4.1 -mini"},
+                {"provider": "azure", "label": "gpt-35-turbo"},
             ])
             model_map = {
                 "openai": {
@@ -43,8 +43,8 @@ class PromptListCreateView(APIView):
                         "deployment": "o4-mini",
                         "api_version": "2024-12-01-preview"
                     },
-                    "GPT-4.1 -mini": {
-                        "deployment": "gpt-4.1-mini",
+                    "GPT-35-turbo": {
+                        "deployment": "gpt-35-turbo",
                         "api_version": "2024-12-01-preview"
                     }
                 }

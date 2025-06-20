@@ -40,6 +40,13 @@ const MODELS = [
     bg: "linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)",
     textColor: "#222",
   },
+  {
+    provider: "azure",
+    label: "GPT-35-turbo",
+    description: "Faster, more affordable reasoning model",
+    bg: "linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)",
+    textColor: "#222",
+  },
 ];
 
 export default function Playground() {
@@ -56,7 +63,7 @@ export default function Playground() {
           (m) => !(m.provider === model.provider && m.label === model.label)
         );
       } else {
-        if (prev.length >= 5) return prev; // Max 5 models
+        if (prev.length >= 6) return prev; // Max 6 models
         return [...prev, model];
       }
     });

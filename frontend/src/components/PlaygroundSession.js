@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 
 export default function PlaygroundSession({ selectedModels }) {
   const [prompt, setPrompt] = useState('');
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const textareaRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      const lineHeight = 24;
+      const minHeight = 2 * lineHeight;
+      const maxHeight = 6 * lineHeight;
+      textarea.style.height = Math.max(minHeight, Math.min(scrollHeight, maxHeight)) + 'px';
+    }
+  }, [prompt]);
+
+  const handlePromptChange = (e) => setPrompt(e.target.value);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -29,128 +44,91 @@ export default function PlaygroundSession({ selectedModels }) {
     }, 400);
   };
 
-  // Inline PromptForm
-  const PromptForm = ({ prompt, setPrompt, onSend, loading, disabled, sendDisabled }) => (
-    <form onSubmit={onSend} style={{ marginBottom: 24 }}>
+  const chunkModels = (models) => {
+    const total = models.length;
+    if (total <= 3) return [models];
+    if (total === 4) return [models.slice(0, 2), models.slice(2)];
+    if (total === 5) return [models.slice(0, 3), models.slice(3)];
+    if (total === 6) return [models.slice(0, 3), models.slice(3)];
+    const chunks = [];
+    for (let i = 0; i < total; i += 3) chunks.push(models.slice(i, i + 3));
+    return chunks;
+  };
+
+  const PromptForm = () => (
+    <form onSubmit={handleSend} className="w-4/5 relative flex items-center bg-white rounded-xl shadow-md p-4 mt-10">
       <textarea
+        ref={textareaRef}
         value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        disabled={disabled || loading}
+        onChange={handlePromptChange}
+        disabled={selectedModels.length === 0 || loading}
         placeholder="Enter your prompt here..."
-        style={{ width: '100%', minHeight: 80, borderRadius: 8, padding: 12, fontSize: 16, border: '1px solid #cbd5e1', marginBottom: 12 }}
+        rows={2}
+        className="flex-1 resize-none border-none outline-none text-base min-h-[48px] max-h-[144px] leading-6 pr-10 bg-transparent text-slate-800 overflow-hidden"
+        onWheel={(e) => e.stopPropagation()}
       />
-      <div>
-        <button
-          type="submit"
-          disabled={sendDisabled}
-          style={{
-            padding: '12px 32px',
-            fontSize: 18,
-            fontWeight: 600,
-            borderRadius: 8,
-            background: sendDisabled ? '#b0b0b0' : '#2563eb',
-            color: 'white',
-            border: 'none',
-            cursor: sendDisabled ? 'not-allowed' : 'pointer',
-            transition: 'background 0.2s',
-          }}
-        >
-          {loading ? 'Processing...' : 'Send'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={selectedModels.length === 0 || !prompt.trim()}
+        className={`absolute right-4 top-1/2 transform -translate-y-1/2 rounded-full w-8 h-8 flex items-center justify-center transition-colors ${!prompt.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+        tabIndex={-1}
+      >
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.5 17.5L17.5 10L2.5 2.5V8.33333L13.3333 10L2.5 11.6667V17.5Z" fill="#fff" />
+        </svg>
+      </button>
     </form>
   );
 
-  // Inline ResponseGrid
-  const ResponseGrid = ({ selectedModels, responses, loading }) => {
-    const container = {
-      hidden: { opacity: 0 },
-      show: {
-        opacity: 1,
-        transition: { staggerChildren: 0.1 },
-      },
-    };
-    const item = {
-      hidden: { opacity: 0, y: 20 },
-      show: { opacity: 1, y: 0 },
-    };
+  const ResponseGrid = () => {
+    const rows = chunkModels(selectedModels.map(m => `${m.provider}-${m.label}`));
+
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center' }}>
-        {selectedModels.map((modelId) => {
-          const [provider, model] = modelId.split('-');
-          return (
-            <div key={modelId} style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px #0001', padding: 24, minWidth: 260, maxWidth: 320 }}>
-              <div style={{ marginBottom: 12 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{model}</h3>
-                <span style={{ fontSize: 14, color: '#2563eb', fontWeight: 600 }}>{provider === 'azure' ? 'Azure' : 'OpenAI'}</span>
-              </div>
-              <div>
-                {loading ? (
-                  <div>
-                    <div style={{ height: 16, background: '#e0e7ef', borderRadius: 4, marginBottom: 8 }}></div>
-                    <div style={{ height: 16, background: '#e0e7ef', borderRadius: 4, marginBottom: 8, width: '60%' }}></div>
-                    <div style={{ height: 16, background: '#e0e7ef', borderRadius: 4, width: '80%' }}></div>
+      <div className="flex flex-col gap-6 w-4/5">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className={`grid gap-6 ${row.length === 1 ? 'grid-cols-1' : row.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
+          >
+            {row.map((modelId) => {
+              const [provider, model] = modelId.split('-');
+              return (
+                <div key={modelId} className="bg-white rounded-2xl shadow-md p-6 max-h-[350px] flex flex-col">
+                  <div className="mb-3">
+                    <h3 className="text-xl font-bold mb-1">{model}</h3>
+                    <span className="text-sm text-blue-600 font-semibold">{provider === 'azure' ? 'Azure' : 'OpenAI'}</span>
                   </div>
-                ) : responses[modelId] ? (
-                  <p style={{ color: '#334155', whiteSpace: 'pre-wrap' }}>{responses[modelId]}</p>
-                ) : (
-                  <p style={{ color: '#64748b', fontStyle: 'italic' }}>No response yet.</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                  <div className="flex-1 overflow-y-auto max-h-[240px] pr-1 text-slate-700 whitespace-pre-wrap">
+                    {loading ? (
+                      <>
+                        <div className="h-4 bg-slate-200 rounded mb-2"></div>
+                        <div className="h-4 bg-slate-200 rounded mb-2 w-3/5"></div>
+                        <div className="h-4 bg-slate-200 rounded w-4/5"></div>
+                      </>
+                    ) : responses[modelId] ? (
+                      <p>{responses[modelId]}</p>
+                    ) : (
+                      <p className="italic text-slate-500">No response yet.</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     );
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f2027 0%, #2c5364 60%, #00c6ff 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Inter, Segoe UI, Arial, sans-serif'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 950,
-        margin: '0 auto',
-        padding: '40px 0'
-      }}>
-        <h2 style={{
-          color: 'white',
-          fontSize: '2.2rem',
-          fontWeight: 900,
-          marginBottom: 32,
-          textAlign: 'center',
-          letterSpacing: 0.5,
-          textShadow: '0 2px 8px #0006'
-        }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f2027] via-[#2c5364] to-[#00c6ff] flex flex-col items-center font-sans px-3">
+      <PromptForm />
+      <div className="w-4/5 my-10">
+        <h2 className="text-white text-3xl font-black mb-8 text-center tracking-wide drop-shadow-lg">
           Playground Session
         </h2>
-        <PromptForm
-          prompt={prompt}
-          setPrompt={setPrompt}
-          onSend={handleSend}
-          loading={loading}
-          disabled={selectedModels.length === 0}
-          sendDisabled={selectedModels.length === 0 || !prompt.trim()}
-        />
-        <div style={{ marginTop: 32 }}>
-          <ResponseGrid
-            selectedModels={selectedModels.map(m => `${m.provider}-${m.label}`)}
-            responses={responses}
-            loading={loading}
-          />
-        </div>
-        {error && (
-          <div style={{ color: 'red', marginTop: 16 }}>
-            {error}
-          </div>
-        )}
+        <ResponseGrid />
+        {error && <div className="text-red-500 mt-4 text-center">{error}</div>}
       </div>
     </div>
   );
