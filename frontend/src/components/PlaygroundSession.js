@@ -103,15 +103,23 @@ export default function PlaygroundSession({ selectedModels }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f2027] via-[#2c5364] to-[#00c6ff] flex flex-col items-center font-sans px-3">
       <div className="w-4/5 mt-10 relative">
-        <h2 className="text-white text-3xl font-black mb-8 text-center tracking-wide drop-shadow-lg">
+        <motion.h2
+          initial={{ y: -40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="text-white text-3xl font-black mb-8 text-center tracking-wide drop-shadow-lg"
+        >
           Playground Session
-        </h2>
-        <button
+        </motion.h2>
+        <motion.button
+          initial={{ y: -40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
           className="absolute top-0 right-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded shadow transition-colors duration-150"
           onClick={() => window.location.href = '/playground'}
         >
           Select New Models
-        </button>
+        </motion.button>
         {showInput && (
           <motion.div
             initial={{ y: -40, opacity: 0 }}
