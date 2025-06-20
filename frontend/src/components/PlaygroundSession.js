@@ -38,7 +38,10 @@ const ResponseGrid = ({ selectedModels, responses, loading, typingStates }) => {
           className={`grid gap-6 ${row.length === 1 ? 'grid-cols-1' : row.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
         >
           {row.map((modelId) => {
-            const [provider, model] = modelId.split('-');
+            // Correctly split provider and model name, even if model has dashes
+            const dashIndex = modelId.indexOf('-');
+            const provider = modelId.slice(0, dashIndex);
+            const model = modelId.slice(dashIndex + 1);
             // Increase maxHeight if only one row (1, 2, or 3 models)
             const isSingleRow = rows.length === 1;
             return (
