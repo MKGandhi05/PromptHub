@@ -7,6 +7,12 @@ from .serializers import PromptSerializer, PromptResponseSerializer
 import openai
 import requests
 from django.conf import settings
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv(os.path.join(settings.BASE_DIR, '.env'))
+
 
 class PromptListCreateView(APIView):
     def get(self, request):
@@ -73,7 +79,7 @@ class PromptListCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_openai_response(self, prompt_text, model="gpt-3.5-turbo"):
-        api_key = getattr(settings, 'OPENAI_API_KEY', None)
+        api_key = os.getenv('OPENAI_API_KEY') or getattr(settings, 'OPENAI_API_KEY', None)
         if not api_key:
             return 'OpenAI API key not set in settings.'
         try:
@@ -87,8 +93,8 @@ class PromptListCreateView(APIView):
             return f'Error: {str(e)}'
 
     def get_azure_openai_response(self, prompt_text, deployment_name, api_version):
-        api_key = getattr(settings, 'AZURE_OPENAI_API_KEY', None)
-        endpoint = getattr(settings, 'AZURE_OPENAI_ENDPOINT', None)
+        api_key = os.getenv('AZURE_OPENAI_API_KEY') or getattr(settings, 'AZURE_OPENAI_API_KEY', None)
+        endpoint = os.getenv('AZURE_OPENAI_ENDPOINT') or getattr(settings, 'AZURE_OPENAI_ENDPOINT', None)
         if not api_key or not endpoint:
             return 'Azure OpenAI API key or endpoint not set in settings.'
         try:

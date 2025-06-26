@@ -1,0 +1,10 @@
+# Frontend requirements (npm packages)
+# Install with: npm install or yarn
+
+react
+react-dom
+react-router-dom
+framer-motion
+@fontsource/inter
+react-syntax-highlighter
+tailwindcss
