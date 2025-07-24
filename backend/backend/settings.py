@@ -79,7 +79,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'openai',
+        'NAME': 'promptprobe',
         'USER': 'root',
         'PASSWORD': 'Mani@2004',
         'HOST': 'localhost',  # Or your database host
