@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
-import LandingPage from './components/LandingPage';
-import Playground from './components/Playground';
-import PlaygroundSession from './components/PlaygroundSession';
+import LandingPage from './pages/LandingPage';
+import Playground from './pages/Playground';
+import PlaygroundSession from './pages/PlaygroundSession';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
@@ -73,6 +75,8 @@ export default function App() {
                 <PlaygroundSessionWrapper />
               </div>
             } />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
           </Routes>
         </div>
       </div>

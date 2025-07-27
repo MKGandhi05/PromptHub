@@ -1,0 +1,34 @@
+/* 🔥 Neon Pulse Beam */
+.pulse-line {
+  stroke-dasharray: 1440;
+  stroke-dashoffset: 0;
+  animation: pulse-beam 4s linear infinite;
+}
+@keyframes pulse-beam {
+  0% { stroke-dashoffset: 1440; opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.6; }
+}
+
+/* 🌌 Circuit Flow with Moving Nodes */
+.circuit-node {
+  fill: #2bd4c5;
+  filter: drop-shadow(0 0 6px #2bd4c5);
+  animation: circuit-move 4s linear infinite;
+}
+.node2 { animation-delay: 2s; fill: #6c63ff; filter: drop-shadow(0 0 6px #6c63ff); }
+@keyframes circuit-move {
+  0% { transform: translateX(0); opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { transform: translateX(1440px); opacity: 0.7; }
+}
+
+/* 🪐 Holographic Wave Shimmer */
+.holo-line {
+  animation: holo-shimmer 6s linear infinite;
+}
+@keyframes holo-shimmer {
+  0% { stroke: url(#holo-gradient); opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { stroke: url(#holo-gradient); opacity: 0.6; }
+}
