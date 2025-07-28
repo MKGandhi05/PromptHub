@@ -137,3 +137,9 @@ AZURE_OPENAI_ENDPOINT = 'https://aiseccureform.openai.azure.com/'
 
 # Allow all origins for development (restrict in production)
 CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}

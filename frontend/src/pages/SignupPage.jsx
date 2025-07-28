@@ -4,11 +4,35 @@ import { useNavigate } from "react-router-dom";
 import { ReactTyped as Typed } from "react-typed";
 
 const SignupPage = () => {
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
+    const userData = {
+      username: e.target.username.value,
+      email: e.target.email.value,
+      password: e.target.password.value,
+    };
+
+    const res = await fetch("http://127.0.0.1:8000/api/register/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem("access", data.access);
+      alert("Signup successful!");
+      navigate("/login");
+    } else {
+      alert(data.error || "Signup failed");
+    }
+  };
+
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex bg-[#0e0e10] text-white font-rajdhani">
-
       {/* LEFT - Animated Glow + Prompt */}
       <div className="hidden md:flex w-1/2 items-center justify-center relative overflow-hidden bg-[#0e0e10]">
         {/* Gradient glows */}
@@ -22,7 +46,7 @@ const SignupPage = () => {
               "Sign up to compare AI models instantly...",
               "Create your account to unlock PromptProbe.",
               "One signup → Start comparing multiple AIs.",
-              "Join PromptProbe and test AI side-by-side!"
+              "Join PromptProbe and test AI side-by-side!",
             ]}
             typeSpeed={50}
             backSpeed={30}
@@ -38,7 +62,6 @@ const SignupPage = () => {
       {/* RIGHT - Signup Form */}
       <div className="w-full md:w-1/2 flex justify-center items-center px-6 py-10">
         <div className="w-full max-w-sm">
-          
           {/* Logo */}
           <div className="flex items-center gap-2 mb-6">
             <img src="/assets/logo.png" alt="PromptProbe" className="w-8 h-8" />
@@ -62,29 +85,51 @@ const SignupPage = () => {
           </div>
 
           {/* Signup Inputs */}
-          <form className="flex flex-col gap-3 w-[90%]">
+          <form className="flex flex-col gap-3 w-[90%]" onSubmit={handleSignup}>
             <label className="text-sm text-blue-200">Full Name</label>
-            <input type="text" placeholder="Your Name" className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white" />
+            <input
+              name="username"
+              type="text"
+              placeholder="Your Name"
+              className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+            />
 
             <label className="text-sm text-blue-200">Email</label>
-            <input type="email" placeholder="Email" className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white" />
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+            />
 
             <label className="text-sm text-blue-200">Password</label>
-            <input type="password" placeholder="Password" className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white" />
+            <input
+              name="password"
+              type="password"
+              placeholder="Password"
+              className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+            />
 
-            <button type="submit" className="bg-[#2bd4c5] text-black font-semibold py-2 rounded hover:bg-[#25bfb1] transition-all">Sign Up</button>
+            <button
+              type="submit"
+              className="bg-[#2bd4c5] text-black font-semibold py-2 rounded hover:bg-[#25bfb1] transition-all"
+            >
+              Sign Up
+            </button>
           </form>
 
           {/* Redirect to Login */}
           <p className="mt-4 text-sm text-blue-200">
             Already have an account?{" "}
-            <button onClick={() => navigate("/login")} className="text-[#2bd4c5] hover:underline">
+            <button
+              onClick={() => navigate("/login")}
+              className="text-[#2bd4c5] hover:underline"
+            >
               Log in
             </button>
           </p>
         </div>
       </div>
-
     </div>
   );
 };
