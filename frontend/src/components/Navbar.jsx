@@ -1,36 +1,51 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
-import logo from "../assets/logo.png"; // Your logo path
+import logo from "../assets/logo.png";
 
-const Navbar = () => {
+const Navbar = ({ user: userProp, setUser: setUserProp }) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // ✅ If no user is passed as prop, manage locally
+  const [user, setUserState] = useState(userProp || null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState(null); // ✅ store user info
 
-  // Detect scroll
+  // ✅ Helper to update user state
+  const updateUser = (u) => {
+    if (setUserProp) setUserProp(u);
+    setUserState(u);
+  };
+
+  // ✅ Detect user from localStorage on mount & listen for changes
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) updateUser(JSON.parse(storedUser));
+
+    const handleStorageChange = () => {
+      const updatedUser = localStorage.getItem("user");
+      updateUser(updatedUser ? JSON.parse(updatedUser) : null);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // ✅ Scroll shadow effect
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ✅ Check login state from localStorage
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  // ✅ Logout handler
+  // ✅ Logout logic
   const handleLogout = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("user");
-    setUser(null);
+    updateUser(null);
+    setMenuOpen(false);
     navigate("/login");
   };
 
@@ -47,7 +62,7 @@ const Navbar = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Left: Logo */}
+        {/* ✅ Logo */}
         <Link to="/" className="flex items-center space-x-2 group">
           <img
             src={logo}
@@ -59,7 +74,7 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* ✅ Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           {navItems.map((item) => (
             <Link
@@ -73,15 +88,13 @@ const Navbar = () => {
             </Link>
           ))}
 
-          {/* ✅ Conditional Rendering */}
+          {/* ✅ Auth Links */}
           {user ? (
             <>
-              <span className="text-white font-semibold">
-                {user.username || "User"}
-              </span>
+              <span className="text-[#30e3ca] font-semibold">👋 {user.username}</span>
               <button
                 onClick={handleLogout}
-                className="text-white border border-white px-4 py-2 rounded-md hover:bg-red-600"
+                className="text-white border border-white px-4 py-2 rounded-md hover:bg-red-600 transition"
               >
                 Logout
               </button>
@@ -90,13 +103,13 @@ const Navbar = () => {
             <>
               <Link
                 to="/login"
-                className="border border-white text-white px-4 py-2 rounded-md hover:bg-white/10"
+                className="border border-white text-white px-4 py-2 rounded-md hover:bg-white/10 transition"
               >
                 Login
               </Link>
               <Link
                 to="/signup"
-                className="bg-[#30e3ca] text-black font-semibold px-4 py-2 rounded-md hover:bg-[#2bcdb7]"
+                className="bg-[#30e3ca] text-black font-semibold px-4 py-2 rounded-md hover:bg-[#2bcdb7] transition"
               >
                 Sign Up
               </Link>
@@ -104,7 +117,7 @@ const Navbar = () => {
           )}
         </nav>
 
-        {/* Hamburger Menu */}
+        {/* ✅ Mobile Menu Button */}
         <div className="md:hidden">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -115,7 +128,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* ✅ Mobile Drawer */}
       {menuOpen && (
         <div className="fixed inset-0 bg-[#0f2027]/95 backdrop-blur-sm z-40 flex flex-col items-center justify-center space-y-6 text-white font-spacegrotesk text-xl">
           {navItems.map((item) => (
@@ -133,8 +146,11 @@ const Navbar = () => {
 
           {user ? (
             <>
-              <span className="text-lg">{user.username || "User"}</span>
-              <button onClick={handleLogout} className="hover:text-red-400">
+              <span className="text-[#30e3ca] text-lg">👋 {user.username}</span>
+              <button
+                onClick={handleLogout}
+                className="hover:text-red-400 text-lg transition"
+              >
                 Logout
               </button>
             </>
