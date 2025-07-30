@@ -1,20 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png"; // Your logo path
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // replace with real auth later
+  const [user, setUser] = useState(null); // ✅ store user info
 
-  // Scroll effects
+  // Detect scroll
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // ✅ Check login state from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // ✅ Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/login");
+  };
 
   const navItems = [
     { name: "Playground", path: "/playground" },
@@ -29,7 +47,7 @@ const Navbar = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Left: Logo + Name */}
+        {/* Left: Logo */}
         <Link to="/" className="flex items-center space-x-2 group">
           <img
             src={logo}
@@ -37,12 +55,11 @@ const Navbar = () => {
             className="w-10 h-10 transform transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110"
           />
           <span className="font-orbitron text-xl md:text-2xl font-bold text-white tracking-wide">
-            Prompt
-            <span className="text-[#30e3ca]">Probe</span>
+            Prompt<span className="text-[#30e3ca]">Probe</span>
           </span>
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           {navItems.map((item) => (
             <Link
@@ -56,15 +73,16 @@ const Navbar = () => {
             </Link>
           ))}
 
-          {isAuthenticated ? (
+          {/* ✅ Conditional Rendering */}
+          {user ? (
             <>
-              <Link
-                to="/profile"
-                className="text-white px-4 py-2 rounded-md hover:text-[#30e3ca]"
+              <span className="text-white font-semibold">
+                {user.username || "User"}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-white border border-white px-4 py-2 rounded-md hover:bg-red-600"
               >
-                Profile
-              </Link>
-              <button className="text-white border border-white px-4 py-2 rounded-md hover:bg-red-600">
                 Logout
               </button>
             </>
@@ -86,7 +104,7 @@ const Navbar = () => {
           )}
         </nav>
 
-        {/* Hamburger */}
+        {/* Hamburger Menu */}
         <div className="md:hidden">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -113,12 +131,12 @@ const Navbar = () => {
             </Link>
           ))}
 
-          {isAuthenticated ? (
+          {user ? (
             <>
-              <Link to="/profile" onClick={() => setMenuOpen(false)}>
-                Profile
-              </Link>
-              <button className="hover:text-red-400">Logout</button>
+              <span className="text-lg">{user.username || "User"}</span>
+              <button onClick={handleLogout} className="hover:text-red-400">
+                Logout
+              </button>
             </>
           ) : (
             <>

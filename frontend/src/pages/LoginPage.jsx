@@ -2,45 +2,54 @@ import React, { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
 import { ReactTyped as Typed } from "react-typed";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ Loading state
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setLoading(true); // ✅ Start loading here
 
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        navigate("/dashboard");
-      } else {
-        setError(data.error || "Invalid email or password");
-      }
-    } catch (err) {
-      setError("Server error. Please try again.");
+    if (res.ok) {
+      toast.success("✅ Login successful! Redirecting...", { autoClose: 2000 });
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setTimeout(() => navigate("/"), 2000);
+    } else {
+      toast.error(data.error || "Invalid email or password");
     }
-  };
+  } catch (err) {
+    toast.error("🚨 Server error. Please try again.");
+  } finally {
+    setLoading(false); // ✅ Stop loading after response
+  }
+};
+
 
   return (
     <div className="min-h-screen flex bg-[#0e0e10] text-white font-rajdhani">
+      {/* Toast Notifications */}
+      <ToastContainer position="top-right" theme="dark" />
       {/* LEFT - Animated Glow + Prompt */}
       <div className="hidden md:flex w-1/2 items-center justify-center relative overflow-hidden bg-[#0e0e10]">
         <div className="absolute w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-[#2bd4c5] via-[#6c63ff] to-[#2bd4c5] opacity-30 blur-[180px] animate-glow-move"></div>
@@ -86,11 +95,6 @@ const LoginPage = () => {
             <span className="flex-grow h-px bg-white/10"></span>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="text-red-400 text-sm mb-2">{error}</div>
-          )}
-
           {/* Login Inputs */}
           <form className="flex flex-col gap-3 w-[90%]" onSubmit={handleLogin}>
             <label className="text-sm text-blue-200">Email</label>
@@ -117,9 +121,12 @@ const LoginPage = () => {
 
             <button
               type="submit"
-              className="bg-[#2bd4c5] text-black font-semibold py-2 rounded hover:bg-[#25bfb1] transition-all"
+              disabled={loading} // ✅ Disable while loading
+              className={`bg-[#2bd4c5] text-black font-semibold py-2 rounded transition-all ${
+                loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#25bfb1]"
+              }`}
             >
-              Log In
+              {loading ? "Logging in..." : "Log In"} {/* ✅ Dynamic text */}
             </button>
           </form>
 

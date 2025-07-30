@@ -1,11 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
 import { ReactTyped as Typed } from "react-typed";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const SignupPage = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); // ✅ Loading state
+
   const handleSignup = async (e) => {
     e.preventDefault();
+    setLoading(true); // ✅ Start loading here
 
     const userData = {
       username: e.target.username.value,
@@ -13,33 +19,38 @@ const SignupPage = () => {
       password: e.target.password.value,
     };
 
-    const res = await fetch("http://127.0.0.1:8000/api/register/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
-    });
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      localStorage.setItem("access", data.access);
-      alert("Signup successful!");
-      navigate("/login");
-    } else {
-      alert(data.error || "Signup failed");
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success("✅ Signup successful! Redirecting...", { autoClose: 2000 });
+        setTimeout(() => navigate("/login"), 2000);
+      } else {
+        toast.error(data.error || "Signup failed. Try again.");
+      }
+    } catch (err) {
+      toast.error("🚨 Server error. Please try again.");
+    } finally {
+      setLoading(false); // ✅ Stop loading after request
     }
   };
 
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen flex bg-[#0e0e10] text-white font-rajdhani">
-      {/* LEFT - Animated Glow + Prompt */}
+      {/* Toast Notifications */}
+      <ToastContainer position="top-right" theme="dark" />
+
+      {/* LEFT - Animated Glow */}
       <div className="hidden md:flex w-1/2 items-center justify-center relative overflow-hidden bg-[#0e0e10]">
-        {/* Gradient glows */}
         <div className="absolute w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-[#2bd4c5] via-[#6c63ff] to-[#2bd4c5] opacity-30 blur-[180px] animate-glow-move"></div>
         <div className="absolute w-[400px] h-[400px] rounded-full bg-[#6c63ff]/40 blur-[120px] animate-glow-move-delayed"></div>
 
-        {/* Animated Prompt Box */}
         <div className="relative z-10 w-3/4 max-w-md bg-white text-black rounded-full px-5 py-3 flex justify-between items-center shadow-2xl border border-white/20">
           <Typed
             strings={[
@@ -92,6 +103,7 @@ const SignupPage = () => {
               type="text"
               placeholder="Your Name"
               className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+              required
             />
 
             <label className="text-sm text-blue-200">Email</label>
@@ -100,6 +112,7 @@ const SignupPage = () => {
               type="email"
               placeholder="Email"
               className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+              required
             />
 
             <label className="text-sm text-blue-200">Password</label>
@@ -108,13 +121,17 @@ const SignupPage = () => {
               type="password"
               placeholder="Password"
               className="px-4 py-2 rounded bg-[#1a1a1d] border border-white/10 focus:outline-none focus:border-[#2bd4c5] text-white"
+              required
             />
 
             <button
               type="submit"
-              className="bg-[#2bd4c5] text-black font-semibold py-2 rounded hover:bg-[#25bfb1] transition-all"
+              disabled={loading} // ✅ Disable button during loading
+              className={`bg-[#2bd4c5] text-black font-semibold py-2 rounded transition-all ${
+                loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#25bfb1]"
+              }`}
             >
-              Sign Up
+              {loading ? "Creating account..." : "Sign Up"} {/* ✅ Dynamic text */}
             </button>
           </form>
 
