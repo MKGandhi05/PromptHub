@@ -9,6 +9,8 @@ from django.contrib.auth.hashers import make_password, check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, UserStats
 from rest_framework.permissions import IsAuthenticated
+from decimal import Decimal
+
 
 load_dotenv(os.path.join(settings.BASE_DIR, '.env'))
 
@@ -27,30 +29,53 @@ class PromptListCreateView(APIView):
         except Exception:
             return Response({'error': 'User stats not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Count how many comparisons (models) are being requested
+        # Selected models (fallback list if not provided)
         selected_models = request.data.get("models", [
-            {"provider": "openai", "label": "GPT-4o"},
-            {"provider": "openai", "label": "o4 – mini"},
-            {"provider": "openai", "label": "GPT-4.1 -mini"},
-            {"provider": "azure", "label": "GPT-4o"},
-            {"provider": "azure", "label": "o4 – mini"},
-            {"provider": "azure", "label": "gpt-35-turbo"},
+            {"provider": "openai", "label": "GPT-4o", "price": 1},
+            {"provider": "openai", "label": "o4 – mini", "price": 1},
+            {"provider": "openai", "label": "GPT-4.1 -mini", "price": 1},
+            {"provider": "azure", "label": "GPT-4o", "price": 1},
+            {"provider": "azure", "label": "o4 – mini", "price": 1},
+            {"provider": "azure", "label": "gpt-35-turbo", "price": 1},
         ])
-        num_comparisons = len(selected_models)
 
-        # Check if user has enough free trials or credits
-        free_trials_to_use = min(user_stats.remaining_free_trials, num_comparisons)
-        credits_needed = num_comparisons - free_trials_to_use
+        # Convert all prices to Decimal
+        total_credits_needed = Decimal("0")
+        for model in selected_models:
+            try:
+                price = Decimal(str(model.get('price', 1)))
+            except (TypeError, ValueError):
+                price = Decimal("1")
+            total_credits_needed += price
+
+        # Use free trials
+        free_trials_to_use = min(user_stats.remaining_free_trials, len(selected_models))
+        credits_needed = total_credits_needed
+        if user_stats.remaining_free_trials > 0:
+            sorted_models = sorted(
+                selected_models,
+                key=lambda m: Decimal(str(m.get('price', 1))),
+                reverse=True
+            )
+            for i in range(free_trials_to_use):
+                try:
+                    price = Decimal(str(sorted_models[i].get('price', 1)))
+                except (TypeError, ValueError):
+                    price = Decimal("1")
+                credits_needed -= price
+            credits_needed = max(Decimal("0"), credits_needed)
+
+        # Check credits availability
         if user_stats.remaining_free_trials == 0 and user_stats.available_credits < credits_needed:
             return Response({'error': 'No free trials or enough credits left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
-        if user_stats.remaining_free_trials > 0 and (user_stats.remaining_free_trials + user_stats.available_credits) < num_comparisons:
+        if user_stats.remaining_free_trials > 0 and (user_stats.available_credits < credits_needed or free_trials_to_use < len(selected_models)):
             return Response({'error': 'Not enough free trials or credits for all comparisons.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        # Deduct free trials and credits
+        # Deduct
         user_stats.remaining_free_trials -= free_trials_to_use
         user_stats.available_credits -= credits_needed
         user_stats.save()
-
+            
         prompt_text = request.data.get("text")
         if not prompt_text:
             return Response({"error": "Prompt text is required."}, status=status.HTTP_400_BAD_REQUEST)
