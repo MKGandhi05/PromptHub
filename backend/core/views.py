@@ -7,17 +7,29 @@ from django.conf import settings
 from dotenv import load_dotenv
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, UserStats
+from rest_framework.permissions import IsAuthenticated
 
 load_dotenv(os.path.join(settings.BASE_DIR, '.env'))
 
 
 class PromptListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         # In stateless mode, GET can return an empty list or a placeholder
         return Response([], status=status.HTTP_200_OK)
 
     def post(self, request):
+        user = request.user
+        # Deduct free trial logic
+        try:
+            user_stats = UserStats.objects.get(user=user)
+        except UserStats.DoesNotExist:
+            return Response({'error': 'User stats not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        if user_stats.remaining_free_trials <= 0:
+            return Response({'error': 'No free trials left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
         prompt_text = request.data.get("text")
         selected_models = request.data.get("models", [
             {"provider": "openai", "label": "GPT-4o"},
@@ -72,10 +84,13 @@ class PromptListCreateView(APIView):
                         )
             except Exception as e:
                 responses[f"{provider}-{label}"] = f"Error: {str(e)}"
-
+        # Deduct one free trial after generating response
+        user_stats.remaining_free_trials -= 1
+        user_stats.save()
         return Response({
             'prompt': {"text": prompt_text},
-            'responses': responses
+            'responses': responses,
+            'remaining_free_trials': user_stats.remaining_free_trials
         }, status=status.HTTP_201_CREATED)
 
 
@@ -94,11 +109,9 @@ class RegisterView(APIView):
         if User.objects.filter(email=email).exists():
             return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create(
-            email=email,
-            username=username,
-            password_hash=make_password(password),
-        )
+        user = User(email=email, username=username)
+        user.set_password(password)
+        user.save()
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -119,7 +132,7 @@ class LoginView(APIView):
         except User.DoesNotExist:
             return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not check_password(password, user.password_hash):
+        if not user.check_password(password):
             return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)

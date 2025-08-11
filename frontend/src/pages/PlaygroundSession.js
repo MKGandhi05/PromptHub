@@ -340,9 +340,13 @@ export default function PlaygroundSession({ selectedModels }) {
     setLoading(true);
     setTimeout(async () => {
       try {
+        const accessToken = localStorage.getItem('access');
         const res = await fetch('http://localhost:8000/api/prompts/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+          },
           body: JSON.stringify({ text: prompt, models: selectedModels })
         });
         if (!res.ok) throw new Error('Failed to fetch response');
