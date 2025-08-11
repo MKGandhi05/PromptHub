@@ -22,15 +22,12 @@ class PromptListCreateView(APIView):
 
     def post(self, request):
         user = request.user
-        # Deduct free trial logic
         try:
-            user_stats = UserStats.objects.get(user=user)
-        except UserStats.DoesNotExist:
+            user_stats = user.stats
+        except Exception:
             return Response({'error': 'User stats not found.'}, status=status.HTTP_400_BAD_REQUEST)
-        if user_stats.remaining_free_trials <= 0:
-            return Response({'error': 'No free trials left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        prompt_text = request.data.get("text")
+        # Count how many comparisons (models) are being requested
         selected_models = request.data.get("models", [
             {"provider": "openai", "label": "GPT-4o"},
             {"provider": "openai", "label": "o4 – mini"},
@@ -39,7 +36,22 @@ class PromptListCreateView(APIView):
             {"provider": "azure", "label": "o4 – mini"},
             {"provider": "azure", "label": "gpt-35-turbo"},
         ])
+        num_comparisons = len(selected_models)
 
+        # Check if user has enough free trials or credits
+        free_trials_to_use = min(user_stats.remaining_free_trials, num_comparisons)
+        credits_needed = num_comparisons - free_trials_to_use
+        if user_stats.remaining_free_trials == 0 and user_stats.available_credits < credits_needed:
+            return Response({'error': 'No free trials or enough credits left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        if user_stats.remaining_free_trials > 0 and (user_stats.remaining_free_trials + user_stats.available_credits) < num_comparisons:
+            return Response({'error': 'Not enough free trials or credits for all comparisons.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        # Deduct free trials and credits
+        user_stats.remaining_free_trials -= free_trials_to_use
+        user_stats.available_credits -= credits_needed
+        user_stats.save()
+
+        prompt_text = request.data.get("text")
         if not prompt_text:
             return Response({"error": "Prompt text is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -84,13 +96,12 @@ class PromptListCreateView(APIView):
                         )
             except Exception as e:
                 responses[f"{provider}-{label}"] = f"Error: {str(e)}"
-        # Deduct one free trial after generating response
-        user_stats.remaining_free_trials -= 1
-        user_stats.save()
+
         return Response({
             'prompt': {"text": prompt_text},
             'responses': responses,
-            'remaining_free_trials': user_stats.remaining_free_trials
+            'remaining_free_trials': user_stats.remaining_free_trials,
+            'available_credits': float(user_stats.available_credits),
         }, status=status.HTTP_201_CREATED)
 
 

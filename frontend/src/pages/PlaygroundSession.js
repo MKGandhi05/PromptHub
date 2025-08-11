@@ -375,6 +375,7 @@ export default function PlaygroundSession({ selectedModels }) {
         const data = await res.json();
         setResponses(data.responses || {});
         if (data.remaining_free_trials !== undefined) setFreeTrials(data.remaining_free_trials);
+        if (data.available_credits !== undefined) setCredits(data.available_credits);
         setPrompt('');
         setLoading(false);
         setTimeout(() => {
