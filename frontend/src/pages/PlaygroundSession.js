@@ -290,7 +290,28 @@ export default function PlaygroundSession({ selectedModels }) {
   const [error, setError] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [typingStates, setTypingStates] = useState({});
+  const [freeTrials, setFreeTrials] = useState(null);
+  const [credits, setCredits] = useState(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    // Fetch user stats on mount
+    const fetchStats = async () => {
+      const accessToken = localStorage.getItem('access');
+      if (!accessToken) return;
+      try {
+        const res = await fetch('http://localhost:8000/api/userstats/', {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFreeTrials(data.remaining_free_trials);
+          setCredits(data.available_credits);
+        }
+      } catch {}
+    };
+    fetchStats();
+  }, []);
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -333,6 +354,7 @@ export default function PlaygroundSession({ selectedModels }) {
     }
   }, [responses, loading]);
 
+  // After handleSend, update stats if present in response
   const handleSend = async (e) => {
     if (e) e.preventDefault();
     setError('');
@@ -352,9 +374,9 @@ export default function PlaygroundSession({ selectedModels }) {
         if (!res.ok) throw new Error('Failed to fetch response');
         const data = await res.json();
         setResponses(data.responses || {});
-        setPrompt(''); // Reset prompt after response
-        setLoading(false); // Move setLoading here to ensure focus happens after loading is false
-        // Focus textarea after response
+        if (data.remaining_free_trials !== undefined) setFreeTrials(data.remaining_free_trials);
+        setPrompt('');
+        setLoading(false);
         setTimeout(() => {
           if (textareaRef.current) textareaRef.current.focus();
         }, 0);
@@ -376,6 +398,19 @@ export default function PlaygroundSession({ selectedModels }) {
         >
           Playground <span className="text-blue-300">Session</span>
         </motion.h2>
+        {/* Display free trials and credits */}
+        <div className="flex justify-center gap-6 mb-4">
+          {freeTrials !== null && (
+            <div className="bg-white/80 text-blue-900 px-4 py-2 rounded-lg font-semibold shadow border border-blue-200">
+              Free Trials: {freeTrials}
+            </div>
+          )}
+          {credits !== null && (
+            <div className="bg-white/80 text-blue-900 px-4 py-2 rounded-lg font-semibold shadow border border-blue-200">
+              Credits: ₹{credits}
+            </div>
+          )}
+        </div>
         <motion.button
           initial={{ y: -40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

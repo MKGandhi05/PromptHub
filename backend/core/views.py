@@ -142,3 +142,17 @@ class LoginView(APIView):
             "refresh": str(refresh),
             "user": {"email": user.email, "username": user.username}
         }, status=status.HTTP_200_OK)
+
+# ----------------- USER STATS -----------------
+class UserStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        try:
+            stats = user.stats
+            return Response({
+                'remaining_free_trials': stats.remaining_free_trials,
+                'available_credits': float(stats.available_credits),
+            }, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({'error': 'User stats not found.'}, status=status.HTTP_404_NOT_FOUND)
