@@ -354,6 +354,23 @@ export default function PlaygroundSession({ selectedModels }) {
     }
   }, [responses, loading]);
 
+  // Calculate comparison cost
+  const getComparisonCost = () => {
+    if (!selectedModels || !Array.isArray(selectedModels)) return 0;
+    return selectedModels.reduce((sum, m) => sum + (m.price || 0), 0);
+  };
+
+  // Fix: Ensure selectedModels have numeric price
+  useEffect(() => {
+    if (selectedModels && Array.isArray(selectedModels)) {
+      selectedModels.forEach(m => {
+        if (typeof m.price === 'string') m.price = parseFloat(m.price);
+      });
+    }
+    // Optionally, force a re-render if needed
+    // setSelectedModels([...selectedModels]);
+  }, [selectedModels]);
+
   // After handleSend, update stats if present in response
   const handleSend = async (e) => {
     if (e) e.preventDefault();
@@ -390,6 +407,67 @@ export default function PlaygroundSession({ selectedModels }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f2027] via-[#2c5364] to-[#00c6ff] flex flex-col items-center font-sans px-3" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* Stats bar at top left */}
+      <div style={{
+        position: 'absolute',
+        top: 32,
+        left: 32,
+        zIndex: 50,
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '18px',
+        alignItems: 'center',
+        background: 'rgba(255,255,255,0.92)',
+        borderRadius: '14px',
+        boxShadow: '0 4px 24px 0 #2563eb22',
+        padding: '12px 28px',
+        minHeight: 56,
+        minWidth: 320,
+        border: '1.5px solid #e0e7ef',
+      }}>
+        {/* Free Trials (only if > 0) */}
+        {freeTrials > 0 && (
+          <div style={{
+            color: '#2563eb',
+            fontWeight: 700,
+            fontSize: 16,
+            padding: '0 10px',
+            borderRight: credits !== null ? '1.5px solid #e0e7ef' : 'none',
+            marginRight: credits !== null ? 10 : 0,
+            letterSpacing: 0.2,
+          }}>
+            Free Trials: <span style={{fontWeight:800}}>{freeTrials}</span>
+          </div>
+        )}
+        {/* Credits with color logic */}
+        {credits !== null && (
+          <div style={{
+            color: credits === 0 ? '#dc2626' : credits <= 25 ? '#ea8800' : '#059669',
+            fontWeight: 700,
+            fontSize: 16,
+            padding: '0 10px',
+            borderRight: selectedModels && selectedModels.length > 0 ? '1.5px solid #e0e7ef' : 'none',
+            marginRight: selectedModels && selectedModels.length > 0 ? 10 : 0,
+            letterSpacing: 0.2,
+            transition: 'color 0.2s',
+          }}>
+            Credits: <span style={{fontWeight:800}}>{Number(credits).toFixed(2)}</span>
+          </div>
+        )}
+        {/* Comparison cost */}
+        {selectedModels && selectedModels.length > 0 && (
+          <div style={{
+            color: '#0e7490',
+            fontWeight: 700,
+            fontSize: 16,
+            padding: '0 10px',
+            letterSpacing: 0.2,
+          }}>
+            Comparison Cost: <span style={{fontWeight:800}}>{Number(getComparisonCost() || 0).toFixed(2)}</span> credits
+          </div>
+        )}
+      </div>
+      {/* Main content */}
       <div className="w-11/12 mt-10 relative">
         <motion.h2
           initial={{ y: -40, opacity: 0 }}
@@ -399,19 +477,8 @@ export default function PlaygroundSession({ selectedModels }) {
         >
           Playground <span className="text-blue-300">Session</span>
         </motion.h2>
-        {/* Display free trials and credits */}
-        <div className="flex justify-center gap-6 mb-4">
-          {freeTrials !== null && (
-            <div className="bg-white/80 text-blue-900 px-4 py-2 rounded-lg font-semibold shadow border border-blue-200">
-              Free Trials: {freeTrials}
-            </div>
-          )}
-          {credits !== null && (
-            <div className="bg-white/80 text-blue-900 px-4 py-2 rounded-lg font-semibold shadow border border-blue-200">
-              Credits: ₹{credits}
-            </div>
-          )}
-        </div>
+        {/* Display free trials, credits, and comparison cost */}
+        
         <motion.button
           initial={{ y: -40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

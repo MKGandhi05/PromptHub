@@ -11,6 +11,7 @@ const MODELS = [
     description: "Fast, intelligent, flexible GPT model",
     bg: "linear-gradient(120deg, #6ee7b7 0%, #3b82f6 100%)",
     textColor: "#fff",
+    price : '0.25'
   },
   {
     provider: "openai",
@@ -18,6 +19,7 @@ const MODELS = [
     description: "Faster, more affordable reasoning model",
     bg: "linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)",
     textColor: "#222",
+    price : '0.5'
   },
   {
     provider: "openai",
@@ -25,6 +27,7 @@ const MODELS = [
     description: "Balanced for intelligence, speed, and cost",
     bg: "linear-gradient(120deg, #60a5fa 0%, #a7f3d0 100%)",
     textColor: "#fff",
+    price : '0.75'
   },
   {
     provider: "azure",
@@ -32,6 +35,7 @@ const MODELS = [
     description: "Fast, intelligent, flexible GPT model",
     bg: "linear-gradient(120deg, #6ee7b7 0%, #3b82f6 100%)",
     textColor: "#fff",
+    price : '0.25'
   },
   {
     provider: "azure",
@@ -39,6 +43,7 @@ const MODELS = [
     description: "Faster, more affordable reasoning model",
     bg: "linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)",
     textColor: "#222",
+    price : '0.5'
   },
   {
     provider: "azure",
@@ -46,6 +51,7 @@ const MODELS = [
     description: "Faster, more affordable reasoning model",
     bg: "linear-gradient(120deg, #fdf6e3 0%, #c9d6ff 100%)",
     textColor: "#222",
+    price : '0.75'
   },
 ];
 
@@ -77,105 +83,132 @@ export default function Playground() {
 
   // ModelCard inlined
   const ModelCard = ({
-    model,
-    provider,
-    selected,
-    onSelect,
-    interactive,
-    description,
-    bg,
-    textColor,
-  }) => {
-    const [hovered, setHovered] = React.useState(false);
-    const logo = provider === "openai" ? openaiLogo : azureLogo;
-    return (
+  model,
+  provider,
+  price, // <-- added here
+  selected,
+  onSelect,
+  interactive,
+  description,
+  bg,
+  textColor,
+}) => {
+  const [hovered, setHovered] = React.useState(false);
+  const logo = provider === "openai" ? openaiLogo : azureLogo;
+
+  return (
+    <div
+      onClick={() => interactive && onSelect()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        border: selected
+          ? "2.5px solid #2563eb"
+          : hovered
+          ? "2.5px solid #60a5fa"
+          : "2.5px solid transparent",
+        borderRadius: 16,
+        margin: 8,
+        background: hovered || selected ? "#23233a" : "#18181b",
+        cursor: "pointer",
+        minWidth: 320,
+        maxWidth: 340,
+        minHeight: 180,
+        boxShadow: selected
+          ? "0 8px 32px 0 #2563eb44"
+          : hovered
+          ? "0 6px 24px 0 #60a5fa33"
+          : "0 2px 12px 0 #0001",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        transition:
+          "box-shadow 0.22s, border 0.22s, background 0.22s, transform 0.18s cubic-bezier(.4,2,.6,1)",
+        transform: selected ? "scale(1.045)" : "scale(1)",
+      }}
+    >
+      {/* Price badge in top-right */}
       <div
-        onClick={() => interactive && onSelect()}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         style={{
-          position: "relative",
-          border: selected
-            ? "2.5px solid #2563eb"
-            : hovered
-            ? "2.5px solid #60a5fa"
-            : "2.5px solid transparent",
-          borderRadius: 16,
-          margin: 8,
-          background: hovered || selected
-            ? "#23233a"
-            : "#18181b",
-          cursor: "pointer",
-          minWidth: 320,
-          maxWidth: 340,
-          minHeight: 180,
-          boxShadow: selected
-            ? "0 8px 32px 0 #2563eb44"
-            : hovered
-            ? "0 6px 24px 0 #60a5fa33"
-            : "0 2px 12px 0 #0001",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          transition:
-            "box-shadow 0.22s, border 0.22s, background 0.22s, transform 0.18s cubic-bezier(.4,2,.6,1)",
-          transform: selected ? "scale(1.045)" : "scale(1)",
+          position: "absolute",
+          top: 12,
+          right: 12,
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          padding: "4px 8px",
+          borderRadius: 8,
+          fontSize: 14,
+          fontWeight: 700,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
         }}
       >
-        <img
-          src={logo}
-          alt={provider + " logo"}
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            width: 28,
-            height: 28,
-            zIndex: 2,
-            objectFit: "contain",
-            filter: selected ? "drop-shadow(0 0 6px #2563eb88)" : hovered ? "drop-shadow(0 0 4px #60a5fa88)" : "none",
-            transition: "filter 0.18s",
-          }}
-        />
-        <div
-          style={{
-            width: "100%",
-            height: 100,
-            borderRadius: 12,
-            background: bg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 16,
-          }}
-        >
-          <span
-            style={{
-              color: textColor,
-              fontWeight: 800,
-              fontSize: 32,
-              letterSpacing: 1,
-              textShadow: "0 2px 8px #0002",
-            }}
-          >
-            {model.replace(" -mini", " mini")}
-          </span>
-        </div>
-        <div
-          style={{
-            color: "#cbd5e1",
-            fontSize: 16,
-            textAlign: "center",
-            marginBottom: 8,
-            minHeight: 44,
-          }}
-        >
-          {description}
-        </div>
+        X {price}
       </div>
-    );
-  };
+
+      {/* Provider Logo */}
+      <img
+        src={logo}
+        alt={provider + " logo"}
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          width: 28,
+          height: 28,
+          zIndex: 2,
+          objectFit: "contain",
+          filter: selected
+            ? "drop-shadow(0 0 6px #2563eb88)"
+            : hovered
+            ? "drop-shadow(0 0 4px #60a5fa88)"
+            : "none",
+          transition: "filter 0.18s",
+        }}
+      />
+
+      {/* Model name section */}
+      <div
+        style={{
+          width: "100%",
+          height: 100,
+          borderRadius: 12,
+          background: bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16,
+        }}
+      >
+        <span
+          style={{
+            color: textColor,
+            fontWeight: 800,
+            fontSize: 32,
+            letterSpacing: 1,
+            textShadow: "0 2px 8px #0002",
+          }}
+        >
+          {model.replace(" -mini", " mini")}
+        </span>
+      </div>
+
+      {/* Description */}
+      <div
+        style={{
+          color: "#cbd5e1",
+          fontSize: 16,
+          textAlign: "center",
+          marginBottom: 8,
+          minHeight: 44,
+        }}
+      >
+        {description}
+      </div>
+    </div>
+  );
+};
 
   // ModelSelectGrid inlined
   const ModelSelectGrid = ({ selectedModels, onSelect }) => {
@@ -199,6 +232,7 @@ export default function Playground() {
             key={`${model.provider}-${model.label}`}
             model={model.label}
             provider={model.provider}
+            price={model.price} // <-- add this
             selected={selectedModels.some(
               (m) => m.provider === model.provider && m.label === model.label
             )}
