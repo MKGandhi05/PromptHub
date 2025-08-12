@@ -1,12 +1,12 @@
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import '@fontsource/inter/700.css';
 import '@fontsource/inter/400.css';
 
 // ✅ ResponseGrid moved outside to prevent unnecessary re-renders
-const ResponseGrid = ({ selectedModels, responses, loading, typingStates }) => {
+const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
   const chunkModels = (models) => {
     const total = models.length;
     if (total <= 3) return [models];
@@ -26,37 +26,26 @@ const ResponseGrid = ({ selectedModels, responses, loading, typingStates }) => {
   };
 
   return (
-    <motion.div
-      initial={{ y: 40, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: 'easeOut', delay: 0.25 }}
-      className="flex flex-col gap-6"
-    >
+    <div className="flex flex-col gap-6">
       {rows.map((row, i) => (
         <div
           key={i}
           className={`grid gap-6 ${row.length === 1 ? 'grid-cols-1' : row.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
         >
           {row.map((modelId) => {
-            // Correctly split provider and model name, even if model has dashes
             const dashIndex = modelId.indexOf('-');
             const provider = modelId.slice(0, dashIndex);
             const model = modelId.slice(dashIndex + 1);
-            // Increase maxHeight if only one row (1, 2, or 3 models)
             const isSingleRow = rows.length === 1;
             return (
-              <motion.div
+              <div
                 key={modelId}
-                initial={{ y: 40, opacity: 0, scale: 0.96 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.35 + i * 0.08 }}
                 className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-6 flex flex-col border border-blue-200 relative"
                 style={{
                   boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
-                  maxHeight: isSingleRow ? '450px' : '350px', // Decreased by 1%
+                  maxHeight: isSingleRow ? '450px' : '350px',
                 }}
               >
-                {/* Logo at top right */}
                 <img
                   src={providerLogos[provider]}
                   alt={provider}
@@ -66,29 +55,35 @@ const ResponseGrid = ({ selectedModels, responses, loading, typingStates }) => {
                 <div className="mb-3 pr-12">
                   <h3 className="text-xl font-bold mb-1 text-slate-800">{model}</h3>
                 </div>
+                {/* Render chat history for each model */}
+                <div className="space-y-2 mb-2">
+                  {chatHistory.filter(msg => !msg.modelId || msg.modelId === modelId).map((msg, idx) => (
+                    <div key={idx} className={msg.role === 'user' ? 'text-right' : 'text-left'}>
+                      <span className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded-lg px-3 py-1 inline-block' : 'bg-gray-100 text-gray-800 rounded-lg px-3 py-1 inline-block'}>
+                        {msg.content}
+                      </span>
+                    </div>
+                  ))}
+                </div>
                 <div className="flex-1 overflow-y-auto text-slate-700 whitespace-pre-wrap custom-scrollbar" style={{ maxHeight: isSingleRow ? '366px' : '240px', paddingRight: 0, marginRight: '-8px' }}>
                   {loading ? (
-                    <div className="flex flex-col gap-2 animate-pulse-response" style={{overflow: 'hidden', minHeight: '64px'}}>
-                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 rounded w-full loading-bar-3d"></div>
-                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-100 to-slate-200 rounded w-3/5 loading-bar-3d"></div>
-                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-300 to-slate-200 rounded w-4/5 loading-bar-3d"></div>
+                    <div className="flex flex-col gap-2" style={{overflow: 'hidden', minHeight: '64px'}}>
+                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 rounded w-full"></div>
+                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-100 to-slate-200 rounded w-3/5"></div>
+                      <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-300 to-slate-200 rounded w-4/5"></div>
                     </div>
                   ) : responses[modelId] ? (
-                    typingStates && typingStates[modelId] !== undefined ? (
-                      <RenderResponse text={typingStates[modelId]} />
-                    ) : (
-                      <RenderResponse text={responses[modelId]} />
-                    )
+                    <RenderResponse text={responses[modelId]} />
                   ) : (
                     <p className="italic text-slate-500">No response yet.</p>
                   )}
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
       ))}
-    </motion.div>
+    </div>
   );
 };
 
@@ -297,9 +292,10 @@ export default function PlaygroundSession({ selectedModels }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showInput, setShowInput] = useState(false);
-  const [typingStates, setTypingStates] = useState({});
   const [freeTrials, setFreeTrials] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const [chatHistory, setChatHistory] = useState([]); // [{role, content, modelId}]
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -343,24 +339,6 @@ export default function PlaygroundSession({ selectedModels }) {
     }
   }, [showInput]);
 
-  // Typing effect for responses
-  useEffect(() => {
-    if (!loading && Object.keys(responses).length > 0) {
-      const newTypingStates = {};
-      Object.entries(responses).forEach(([modelId, text]) => {
-        newTypingStates[modelId] = '';
-        let i = 0;
-        const typeChar = () => {
-          setTypingStates(prev => ({ ...prev, [modelId]: text.slice(0, i) }));
-          if (i < text.length) {
-            i++;
-            setTimeout(typeChar, 1 + Math.random() * 3); // Much faster typing
-          }
-        };
-        typeChar();
-      });
-    }
-  }, [responses, loading]);
 
   // Calculate comparison cost
   const getComparisonCost = () => {
@@ -379,38 +357,44 @@ export default function PlaygroundSession({ selectedModels }) {
     // setSelectedModels([...selectedModels]);
   }, [selectedModels]);
 
-  // After handleSend, update stats if present in response
+  // Update handleSend for multi-turn
   const handleSend = async (e) => {
     if (e) e.preventDefault();
     setError('');
-    setResponses({});
     setLoading(true);
-    setTimeout(async () => {
-      try {
-        const accessToken = localStorage.getItem('access');
-        const res = await fetch('http://localhost:8000/api/prompts/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
-          },
-          body: JSON.stringify({ text: prompt, models: selectedModels })
-        });
-        if (!res.ok) throw new Error('Failed to fetch response');
-        const data = await res.json();
-        setResponses(data.responses || {});
-        // if (data.remaining_free_trials !== undefined) setFreeTrials(data.remaining_free_trials);
-        if (data.available_credits !== undefined) setCredits(data.available_credits);
-        setPrompt('');
-        setLoading(false);
-        setTimeout(() => {
-          if (textareaRef.current) textareaRef.current.focus();
-        }, 0);
-      } catch (err) {
-        setError('Something went wrong.');
-        setLoading(false);
-      }
-    }, 400);
+    try {
+      const accessToken = localStorage.getItem('access');
+      const payload = {
+        text: prompt,
+        models: selectedModels,
+      };
+      if (sessionId) payload.session_id = sessionId;
+      const res = await fetch('http://localhost:8000/api/prompts/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to fetch response');
+      const data = await res.json();
+      setResponses(data.responses || {});
+      if (data.session_id) setSessionId(data.session_id);
+      if (data.available_credits !== undefined) setCredits(data.available_credits);
+      // Update chat history
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: prompt },
+        ...Object.entries(data.responses || {}).map(([modelId, content]) => ({ role: 'assistant', content, modelId }))
+      ]);
+      setPrompt('');
+      setLoading(false);
+      if (textareaRef.current) textareaRef.current.focus();
+    } catch (err) {
+      setError('Something went wrong.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -463,32 +447,20 @@ export default function PlaygroundSession({ selectedModels }) {
       </div>
       {/* Main content */}
       <div className="w-11/12 mt-10 relative">
-        <motion.h2
-          initial={{ y: -40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-white text-4xl md:text-5xl font-extrabold mb-3 text-center tracking-tight drop-shadow-xl" style={{letterSpacing: '0.01em'}}
-        >
+        <h2
+          className="text-white text-4xl md:text-5xl font-extrabold mb-3 text-center tracking-tight drop-shadow-xl" style={{letterSpacing: '0.01em'}}>
           Playground <span className="text-blue-300">Session</span>
-        </motion.h2>
+        </h2>
         {/* Display free trials, credits, and comparison cost */}
         
-        <motion.button
-          initial={{ y: -40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
+        <button
           className="absolute top-0 right-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded shadow transition-colors duration-150"
           onClick={() => window.location.href = '/playground'}
         >
           Select New Models
-        </motion.button>
+        </button>
         {showInput && (
-          <motion.div
-            initial={{ y: -40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="mt-6 relative"
-          >
+          <div className="mt-6 relative">
             <textarea
               ref={textareaRef}
               value={prompt}
@@ -565,25 +537,16 @@ export default function PlaygroundSession({ selectedModels }) {
               onClick={handleSend}
               disabled={selectedModels.length === 0 || !prompt.trim() || loading}
             >
-              {loading ? (
-                <span className="w-5 h-5 flex items-center justify-center">
-                  <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                </span>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-600 hover:text-blue-700 transition-colors duration-150">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l10 1.5-10 1.5v6z" />
-                </svg>
-              )}
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-600 hover:text-blue-700 transition-colors duration-150">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l10 1.5-10 1.5v6z" />
+              </svg>
             </button>
-          </motion.div>
-        )}
+          </div>
+  )}
       </div>
 
       <div className="w-11/12 my-10">
-        <ResponseGrid selectedModels={selectedModels} responses={responses} loading={loading} typingStates={typingStates} />
+  <ResponseGrid selectedModels={selectedModels} responses={responses} loading={loading} chatHistory={chatHistory} />
         {error && <div className="text-red-500 mt-4 text-center">{error}</div>}
       </div>
     </div>

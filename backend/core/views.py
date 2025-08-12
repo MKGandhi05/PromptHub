@@ -52,17 +52,32 @@ class PromptListCreateView(APIView):
         except Exception:
             return Response({'error': 'User stats not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Selected models (fallback list if not provided)
-        selected_models = request.data.get("models", [
-            {"provider": "openai", "label": "GPT-4o", "price": 1},
-            {"provider": "openai", "label": "o4 – mini", "price": 1},
-            {"provider": "openai", "label": "GPT-4.1 -mini", "price": 1},
-            {"provider": "azure", "label": "GPT-4o", "price": 1},
-            {"provider": "azure", "label": "o4 – mini", "price": 1},
-            {"provider": "azure", "label": "gpt-35-turbo", "price": 1},
-        ])
+        # Multi-turn: get session_id if provided
+        session_id = request.data.get("session_id")
+        selected_models = request.data.get("models", [])
+        prompt_text = request.data.get("text")
+        if not prompt_text:
+            return Response({"error": "Prompt text is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Convert all prices to Decimal
+        # If session_id provided, fetch session, else create new
+        if session_id:
+            try:
+                chat_session = ChatSession.objects.get(id=session_id, user=user)
+            except ChatSession.DoesNotExist:
+                return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+            # Use previous model selection
+            if not selected_models:
+                selected_models = chat_session.model_selection
+        else:
+            if not selected_models:
+                return Response({"error": "Model selection required for new session."}, status=status.HTTP_400_BAD_REQUEST)
+            chat_session = ChatSession.objects.create(
+                user=user,
+                session_name=None,
+                model_selection=selected_models
+            )
+
+        # Calculate credits
         total_credits_needed = Decimal("0")
         for model in selected_models:
             try:
@@ -70,18 +85,22 @@ class PromptListCreateView(APIView):
             except (TypeError, ValueError):
                 price = Decimal("1")
             total_credits_needed += price
-
         if user_stats.available_credits < total_credits_needed:
             return Response({'error': 'Not enough credits left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
-
-        # Deduct credits
         user_stats.available_credits -= total_credits_needed
         user_stats.save()
 
-        prompt_text = request.data.get("text")
-        if not prompt_text:
-            return Response({"error": "Prompt text is required."}, status=status.HTTP_400_BAD_REQUEST)
+        # Save PromptMessage
+        prompt_message = PromptMessage.objects.create(
+            chat_session=chat_session,
+            sender='user',
+            content=prompt_text
+        )
 
+        # Build chat history for each model
+        # For each model, collect all previous user/model messages in order
+        all_messages = PromptMessage.objects.filter(chat_session=chat_session).order_by('created_at')
+        responses = {}
         model_map = {
             "openai": {
                 "GPT-4o": "gpt-4o",
@@ -103,32 +122,25 @@ class PromptListCreateView(APIView):
                 }
             }
         }
-
-        # --- Save ChatSession ---
-        chat_session = ChatSession.objects.create(
-            user=user,
-            session_name=None,
-            model_selection=selected_models
-        )
-
-        # --- Save PromptMessage ---
-        prompt_message = PromptMessage.objects.create(
-            chat_session=chat_session,
-            sender='user',
-            content=prompt_text
-        )
-
-        responses = {}
+        from semantic_kernel.contents.chat_history import ChatHistory
         for model in selected_models:
             provider = model.get("provider", "openai")
             label = model.get("label")
             try:
+                # Build chat history for this model using ChatHistory object
+                chat_history = ChatHistory()
+                for msg in all_messages:
+                    chat_history.add_user_message(msg.content)
+                    model_responses = msg.model_responses.filter(model_label=label, provider=provider)
+                    for r in model_responses:
+                        chat_history.add_assistant_message(r.response_content)
+
+                # Call model with full chat history
                 if provider == "openai":
                     model_id = model_map.get(provider, {}).get(label)
                     if model_id:
-                        resp = get_openai_response_with_sk(prompt_text, model_id)
+                        resp = get_openai_response_with_sk(chat_history, model_id)
                         responses[f"openai-{label}"] = resp
-                        # Save ModelResponse
                         ModelResponse.objects.create(
                             prompt_message=prompt_message,
                             model_label=label,
@@ -139,12 +151,11 @@ class PromptListCreateView(APIView):
                     model_config = model_map.get(provider, {}).get(label)
                     if model_config:
                         resp = get_azure_response_with_sk(
-                            prompt_text,
+                            chat_history,
                             model_config["deployment"],
                             model_config["api_version"]
                         )
                         responses[f"azure-{label}"] = resp
-                        # Save ModelResponse
                         ModelResponse.objects.create(
                             prompt_message=prompt_message,
                             model_label=label,
@@ -158,6 +169,7 @@ class PromptListCreateView(APIView):
             'prompt': {"text": prompt_text},
             'responses': responses,
             'available_credits': float(user_stats.available_credits),
+            'session_id': chat_session.id,
         }, status=status.HTTP_201_CREATED)
 
 
