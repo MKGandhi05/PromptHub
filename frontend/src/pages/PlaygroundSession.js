@@ -284,7 +284,15 @@ function renderInlineCode(text, keyPrefix = '') {
 }
 
 export default function PlaygroundSession({ selectedModels }) {
-  const [prompt, setPrompt] = useState('');
+  // If coming from history, prefill prompt
+  const [prompt, setPrompt] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('fromHistory')) {
+      const histPrompt = localStorage.getItem('historyPrompt');
+      return histPrompt || '';
+    }
+    return '';
+  });
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

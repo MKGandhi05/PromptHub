@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PromptListCreateView, PromptResponseListView, RegisterView, LoginView, UserStatsView
+from .views import PromptListCreateView, PromptResponseListView, RegisterView, LoginView, UserStatsView, ComparisonHistoryView
 
 urlpatterns = [
     path('prompts/', PromptListCreateView.as_view(), name='prompt-list-create'),
@@ -9,4 +9,5 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
 
     path('userstats/', UserStatsView.as_view(), name='user-stats'),
+    path('history/', ComparisonHistoryView.as_view(), name='comparison-history'),
 ]

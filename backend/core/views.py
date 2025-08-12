@@ -7,14 +7,37 @@ from django.conf import settings
 from dotenv import load_dotenv
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, UserStats
+from .models import User, UserStats, ChatSession, PromptMessage, ModelResponse
 from rest_framework.permissions import IsAuthenticated
 from decimal import Decimal
 
 
 load_dotenv(os.path.join(settings.BASE_DIR, '.env'))
 
+class ComparisonHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+        sessions = ChatSession.objects.filter(user=user).order_by('-started_at')[:20]
+        history = []
+        for session in sessions:
+            for msg in session.messages.all():
+                responses = ModelResponse.objects.filter(prompt_message=msg)
+                history.append({
+                    "prompt": msg.content,
+                    "created_at": msg.created_at,
+                    "models": [
+                        {
+                            "model_label": r.model_label,
+                            "provider": r.provider,
+                            "response": r.response_content,
+                            "created_at": r.created_at
+                        }
+                        for r in responses
+                    ]
+                })
+        return Response(history, status=200)
 class PromptListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -54,7 +77,7 @@ class PromptListCreateView(APIView):
         # Deduct credits
         user_stats.available_credits -= total_credits_needed
         user_stats.save()
-            
+
         prompt_text = request.data.get("text")
         if not prompt_text:
             return Response({"error": "Prompt text is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -81,6 +104,20 @@ class PromptListCreateView(APIView):
             }
         }
 
+        # --- Save ChatSession ---
+        chat_session = ChatSession.objects.create(
+            user=user,
+            session_name=None,
+            model_selection=selected_models
+        )
+
+        # --- Save PromptMessage ---
+        prompt_message = PromptMessage.objects.create(
+            chat_session=chat_session,
+            sender='user',
+            content=prompt_text
+        )
+
         responses = {}
         for model in selected_models:
             provider = model.get("provider", "openai")
@@ -89,14 +126,30 @@ class PromptListCreateView(APIView):
                 if provider == "openai":
                     model_id = model_map.get(provider, {}).get(label)
                     if model_id:
-                        responses[f"openai-{label}"] = get_openai_response_with_sk(prompt_text, model_id)
+                        resp = get_openai_response_with_sk(prompt_text, model_id)
+                        responses[f"openai-{label}"] = resp
+                        # Save ModelResponse
+                        ModelResponse.objects.create(
+                            prompt_message=prompt_message,
+                            model_label=label,
+                            provider=provider,
+                            response_content=resp
+                        )
                 elif provider == "azure":
                     model_config = model_map.get(provider, {}).get(label)
                     if model_config:
-                        responses[f"azure-{label}"] = get_azure_response_with_sk(
+                        resp = get_azure_response_with_sk(
                             prompt_text,
                             model_config["deployment"],
                             model_config["api_version"]
+                        )
+                        responses[f"azure-{label}"] = resp
+                        # Save ModelResponse
+                        ModelResponse.objects.create(
+                            prompt_message=prompt_message,
+                            model_label=label,
+                            provider=provider,
+                            response_content=resp
                         )
             except Exception as e:
                 responses[f"{provider}-{label}"] = f"Error: {str(e)}"

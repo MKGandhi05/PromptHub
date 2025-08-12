@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
@@ -13,15 +13,20 @@ const Navbar = ({ user: userProp, setUser: setUserProp }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ✅ Helper to update user state
-  const updateUser = (u) => {
-    if (setUserProp) setUserProp(u);
-    setUserState(u);
-  };
+  const updateUser = useCallback(
+    (u) => {
+      if (setUserProp) setUserProp(u);
+      setUserState(u);
+    },
+    [setUserProp]
+  );
 
   // ✅ Detect user from localStorage on mount & listen for changes
   useEffect(() => {
+    // Always check localStorage for user on mount (for persistence after refresh)
     const storedUser = localStorage.getItem("user");
     if (storedUser) updateUser(JSON.parse(storedUser));
+    else updateUser(null);
 
     const handleStorageChange = () => {
       const updatedUser = localStorage.getItem("user");
@@ -30,7 +35,7 @@ const Navbar = ({ user: userProp, setUser: setUserProp }) => {
 
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [updateUser]);
 
   // ✅ Scroll shadow effect
   useEffect(() => {

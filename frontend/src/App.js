@@ -6,6 +6,7 @@ import Playground from './pages/Playground';
 import PlaygroundSession from './pages/PlaygroundSession';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import HistoryPage from './pages/HistoryPage';
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
@@ -75,6 +76,7 @@ export default function App() {
                 <PlaygroundSessionWrapper />
               </div>
             } />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
           </Routes>
