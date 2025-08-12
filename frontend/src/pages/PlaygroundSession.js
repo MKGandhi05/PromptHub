@@ -305,7 +305,7 @@ export default function PlaygroundSession({ selectedModels }) {
         });
         if (res.ok) {
           const data = await res.json();
-          setFreeTrials(data.remaining_free_trials);
+          // setFreeTrials(data.remaining_free_trials);
           setCredits(data.available_credits);
         }
       } catch {}
@@ -391,7 +391,7 @@ export default function PlaygroundSession({ selectedModels }) {
         if (!res.ok) throw new Error('Failed to fetch response');
         const data = await res.json();
         setResponses(data.responses || {});
-        if (data.remaining_free_trials !== undefined) setFreeTrials(data.remaining_free_trials);
+        // if (data.remaining_free_trials !== undefined) setFreeTrials(data.remaining_free_trials);
         if (data.available_credits !== undefined) setCredits(data.available_credits);
         setPrompt('');
         setLoading(false);
@@ -425,24 +425,10 @@ export default function PlaygroundSession({ selectedModels }) {
         minWidth: 320,
         border: '1.5px solid #e0e7ef',
       }}>
-        {/* Free Trials (only if > 0) */}
-        {freeTrials > 0 && (
-          <div style={{
-            color: '#2563eb',
-            fontWeight: 700,
-            fontSize: 16,
-            padding: '0 10px',
-            borderRight: credits !== null ? '1.5px solid #e0e7ef' : 'none',
-            marginRight: credits !== null ? 10 : 0,
-            letterSpacing: 0.2,
-          }}>
-            Free Trials: <span style={{fontWeight:800}}>{freeTrials}</span>
-          </div>
-        )}
         {/* Credits with color logic */}
         {credits !== null && (
           <div style={{
-            color: credits === 0 ? '#dc2626' : credits <= 25 ? '#ea8800' : '#059669',
+            color: credits <= 10 ? '#dc2626' : credits <= 25 ? '#ea8800' : '#059669',
             fontWeight: 700,
             fontSize: 16,
             padding: '0 10px',

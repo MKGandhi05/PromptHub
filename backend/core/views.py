@@ -48,32 +48,11 @@ class PromptListCreateView(APIView):
                 price = Decimal("1")
             total_credits_needed += price
 
-        # Use free trials
-        free_trials_to_use = min(user_stats.remaining_free_trials, len(selected_models))
-        credits_needed = total_credits_needed
-        if user_stats.remaining_free_trials > 0:
-            sorted_models = sorted(
-                selected_models,
-                key=lambda m: Decimal(str(m.get('price', 1))),
-                reverse=True
-            )
-            for i in range(free_trials_to_use):
-                try:
-                    price = Decimal(str(sorted_models[i].get('price', 1)))
-                except (TypeError, ValueError):
-                    price = Decimal("1")
-                credits_needed -= price
-            credits_needed = max(Decimal("0"), credits_needed)
+        if user_stats.available_credits < total_credits_needed:
+            return Response({'error': 'Not enough credits left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        # Check credits availability
-        if user_stats.remaining_free_trials == 0 and user_stats.available_credits < credits_needed:
-            return Response({'error': 'No free trials or enough credits left.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
-        if user_stats.remaining_free_trials > 0 and (user_stats.available_credits < credits_needed or free_trials_to_use < len(selected_models)):
-            return Response({'error': 'Not enough free trials or credits for all comparisons.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
-
-        # Deduct
-        user_stats.remaining_free_trials -= free_trials_to_use
-        user_stats.available_credits -= credits_needed
+        # Deduct credits
+        user_stats.available_credits -= total_credits_needed
         user_stats.save()
             
         prompt_text = request.data.get("text")
@@ -125,7 +104,6 @@ class PromptListCreateView(APIView):
         return Response({
             'prompt': {"text": prompt_text},
             'responses': responses,
-            'remaining_free_trials': user_stats.remaining_free_trials,
             'available_credits': float(user_stats.available_credits),
         }, status=status.HTTP_201_CREATED)
 
@@ -187,7 +165,6 @@ class UserStatsView(APIView):
         try:
             stats = user.stats
             return Response({
-                'remaining_free_trials': stats.remaining_free_trials,
                 'available_credits': float(stats.available_credits),
             }, status=status.HTTP_200_OK)
         except Exception:

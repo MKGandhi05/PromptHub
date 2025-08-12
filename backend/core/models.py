@@ -51,8 +51,7 @@ class User(AbstractUser):
 
 class UserStats(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='stats')
-    remaining_free_trials = models.IntegerField(default=3)
-    available_credits = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # INR
+    available_credits = models.DecimalField(max_digits=10, decimal_places=2, default=5.00)  # INR, default 5
     last_used_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
