@@ -37,6 +37,10 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
             const provider = modelId.slice(0, dashIndex);
             const model = modelId.slice(dashIndex + 1);
             const isSingleRow = rows.length === 1;
+            // Filter chatHistory for this model: show all user messages and assistant messages for this model
+            const filteredMessages = chatHistory.filter(
+              msg => msg.role === 'user' || msg.modelId === modelId
+            );
             return (
               <div
                 key={modelId}
@@ -55,18 +59,9 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
                 <div className="mb-3 pr-12">
                   <h3 className="text-xl font-bold mb-1 text-slate-800">{model}</h3>
                 </div>
-                {/* Render chat history for each model */}
-                <div className="space-y-2 mb-2">
-                  {chatHistory.filter(msg => !msg.modelId || msg.modelId === modelId).map((msg, idx) => (
-                    <div key={idx} className={msg.role === 'user' ? 'text-right' : 'text-left'}>
-                      <span className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded-lg px-3 py-1 inline-block' : 'bg-gray-100 text-gray-800 rounded-lg px-3 py-1 inline-block'}>
-                        {msg.content}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {/* Chat history area with scrollable custom scrollbar */}
                 <div
-                  className="flex-1 text-slate-700 whitespace-pre-wrap custom-scrollbar"
+                  className="flex-1 custom-scrollbar mb-2"
                   style={{
                     height: isSingleRow ? '320px' : '180px',
                     maxHeight: isSingleRow ? '320px' : '180px',
@@ -76,18 +71,27 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
                     background: 'rgba(255,255,255,0.04)',
                     borderRadius: 10,
                     transition: 'box-shadow 0.18s',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
-                  {loading ? (
-                    <div className="flex flex-col gap-2" style={{overflow: 'hidden', minHeight: '64px'}}>
+                  {filteredMessages.length > 0 ? (
+                    filteredMessages.map((msg, idx) => (
+                      <div key={idx} className={msg.role === 'user' ? 'text-right' : 'text-left'} style={{marginBottom: 8}}>
+                        <span className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded-lg px-3 py-1 inline-block' : 'bg-gray-100 text-gray-800 rounded-lg px-3 py-1 inline-block'}>
+                          {msg.role === 'assistant' ? <RenderResponse text={msg.content} /> : msg.content}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="italic text-slate-500">No messages yet.</p>
+                  )}
+                  {loading && (
+                    <div className="flex flex-col gap-2 mt-2" style={{overflow: 'hidden', minHeight: '64px'}}>
                       <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 rounded w-full"></div>
                       <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-100 to-slate-200 rounded w-3/5"></div>
                       <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-300 to-slate-200 rounded w-4/5"></div>
                     </div>
-                  ) : responses[modelId] ? (
-                    <RenderResponse text={responses[modelId]} />
-                  ) : (
-                    <p className="italic text-slate-500">No response yet.</p>
                   )}
                 </div>
               </div>
