@@ -1,48 +1,66 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAccessToken, refreshAccessToken, setAccessToken } from "../utils/tokenManager";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const accessToken = localStorage.getItem("access");
-        const res = await fetch("http://localhost:8000/api/history/", {
+  const navigate = useNavigate();
+
+  // Use centralized tokenManager for refresh
+
+  const fetchHistory = async () => {
+    setLoading(true);
+    setError(null);
+
+  let accessToken = getAccessToken();
+    try {
+      let res = await fetch("http://localhost:8000/api/history/", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // If token expired, try refresh
+      if (res.status === 401) {
+  accessToken = await refreshAccessToken();
+        res = await fetch("http://localhost:8000/api/history/", {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
         });
-        if (!res.ok) throw new Error("Failed to fetch history");
-        const data = await res.json();
-        setHistory(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
-    };
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch history");
+      }
+
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, []);
 
-  const navigate = useNavigate();
-
-  // Helper: go to playground session with this prompt/models
   const handleGoToSession = (item) => {
-    // Save prompt and models to localStorage for PlaygroundSession
     localStorage.setItem("historyPrompt", item.prompt);
-    // Convert models to Playground format (provider, label)
-    const models = item.models.map(m => ({ provider: m.provider, label: m.model_label }));
+    const models = item.models.map((m) => ({
+      provider: m.provider,
+      label: m.model_label,
+    }));
     localStorage.setItem("selectedModels", JSON.stringify(models));
-    // Store responses as {"provider-label": response}
     const responses = {};
-    item.models.forEach(m => {
+    item.models.forEach((m) => {
       responses[`${m.provider}-${m.model_label}`] = m.response;
     });
     localStorage.setItem("historyResponses", JSON.stringify(responses));
@@ -67,16 +85,27 @@ export default function HistoryPage() {
             onClick={() => handleGoToSession(item)}
           >
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-xs">{new Date(item.created_at).toLocaleString()}</span>
-              <span className="ml-2 px-2 py-0.5 bg-[#30e3ca]/20 text-[#30e3ca] text-xs rounded">{item.models.length} models</span>
+              <span className="text-gray-400 text-xs">
+                {new Date(item.created_at).toLocaleString()}
+              </span>
+              <span className="ml-2 px-2 py-0.5 bg-[#30e3ca]/20 text-[#30e3ca] text-xs rounded">
+                {item.models.length} models
+              </span>
             </div>
-            <div className="font-medium text-white mt-2 truncate" style={{maxWidth:'90%'}}>
-              {item.prompt.length > 120 ? item.prompt.slice(0,120)+"..." : item.prompt}
+            <div
+              className="font-medium text-white mt-2 truncate"
+              style={{ maxWidth: "90%" }}
+            >
+              {item.prompt.length > 120
+                ? item.prompt.slice(0, 120) + "..."
+                : item.prompt}
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-8 text-center text-gray-400 text-xs">Click a prompt to revisit the comparison session.</div>
+      <div className="mt-8 text-center text-gray-400 text-xs">
+        Click a prompt to revisit the comparison session.
+      </div>
     </div>
   );
 }

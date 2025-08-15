@@ -65,7 +65,19 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
                     </div>
                   ))}
                 </div>
-                <div className="flex-1 overflow-y-auto text-slate-700 whitespace-pre-wrap custom-scrollbar" style={{ maxHeight: isSingleRow ? '366px' : '240px', paddingRight: 0, marginRight: '-8px' }}>
+                <div
+                  className="flex-1 text-slate-700 whitespace-pre-wrap custom-scrollbar"
+                  style={{
+                    height: isSingleRow ? '320px' : '180px',
+                    maxHeight: isSingleRow ? '320px' : '180px',
+                    minHeight: '80px',
+                    overflowY: 'auto',
+                    paddingRight: 8,
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 10,
+                    transition: 'box-shadow 0.18s',
+                  }}
+                >
                   {loading ? (
                     <div className="flex flex-col gap-2" style={{overflow: 'hidden', minHeight: '64px'}}>
                       <div className="h-4 bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 rounded w-full"></div>
@@ -248,33 +260,42 @@ function CodeBlockWithCopy({ code, language }) {
   const [copied, setCopied] = React.useState(false);
   return (
     <div className="my-2 relative group">
-      <SyntaxHighlighter language={language} style={oneDark} customStyle={{ borderRadius: 8, fontSize: 14, margin: 0, padding: 16 }}>
+      <SyntaxHighlighter
+        language={language}
+        style={oneDark}
+        customStyle={{
+          borderRadius: 10,
+          fontSize: 15,
+          margin: 0,
+          padding: 18,
+          background: '#181f2a',
+          boxShadow: '0 2px 8px #2563eb22',
+        }}
+      >
         {code}
       </SyntaxHighlighter>
       <button
-        className={`absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1 rounded shadow transition-colors duration-150 opacity-80 group-hover:opacity-100`}
-        style={{zIndex:2}}
+        className={`absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white text-xs font-semibold px-3 py-1 rounded shadow transition-colors duration-150 opacity-90 group-hover:opacity-100 border border-blue-300`}
+        style={{ zIndex: 2, boxShadow: '0 2px 8px #2563eb33', letterSpacing: 0.2, fontWeight: 600 }}
         onClick={async () => {
           await navigator.clipboard.writeText(code);
           setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          setTimeout(() => setCopied(false), 1800);
         }}
       >
-        {copied ? 'Copied!' : 'Copy'}
+        {copied ? (
+          <span className="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            Copied!
+          </span>
+        ) : (
+          <span className="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8M8 12h8m-7 4h.01M8 8h.01M12 8h.01M16 8h.01" /></svg>
+            Copy
+          </span>
+        )}
       </button>
     </div>
-  );
-}
-
-function renderInlineCode(text, keyPrefix = '') {
-  // Inline code (single backticks)
-  const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((part, i) =>
-    part.startsWith('`') && part.endsWith('`') ? (
-      <code key={keyPrefix + '-' + i} className="bg-slate-100 px-1 rounded text-blue-700 text-sm font-mono">{part.slice(1, -1)}</code>
-    ) : (
-      <span key={keyPrefix + '-' + i}>{part}</span>
-    )
   );
 }
 
@@ -542,11 +563,11 @@ export default function PlaygroundSession({ selectedModels }) {
               </svg>
             </button>
           </div>
-  )}
+        )}
       </div>
 
       <div className="w-11/12 my-10">
-  <ResponseGrid selectedModels={selectedModels} responses={responses} loading={loading} chatHistory={chatHistory} />
+        <ResponseGrid selectedModels={selectedModels} responses={responses} loading={loading} chatHistory={chatHistory} />
         {error && <div className="text-red-500 mt-4 text-center">{error}</div>}
       </div>
     </div>

@@ -3,6 +3,7 @@ import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
 import { ReactTyped as Typed } from "react-typed";
 import { toast, ToastContainer } from "react-toastify";
+import { setAccessToken, setRefreshToken, clearTokens } from "../utils/tokenManager";
 import "react-toastify/dist/ReactToastify.css";
 
 const LoginPage = () => {
@@ -30,16 +31,18 @@ const LoginPage = () => {
 
     if (res.ok) {
       toast.success("✅ Login successful! Redirecting...", { autoClose: 2000 });
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
-      localStorage.setItem("user", JSON.stringify(data.user));
+  setAccessToken(data.access);
+  setRefreshToken(data.refresh);
+  localStorage.setItem("user", JSON.stringify(data.user));
 
       setTimeout(() => navigate("/"), 2000);
     } else {
-      toast.error(data.error || "Invalid email or password");
+  if (data.error) clearTokens();
+  toast.error(data.error || "Invalid email or password");
     }
   } catch (err) {
-    toast.error("🚨 Server error. Please try again.");
+  clearTokens();
+  toast.error("🚨 Server error. Please try again.");
   } finally {
     setLoading(false); // ✅ Stop loading after response
   }

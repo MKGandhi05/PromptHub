@@ -3,6 +3,7 @@ import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
 import { ReactTyped as Typed } from "react-typed";
 import { toast, ToastContainer } from "react-toastify";
+import { clearTokens } from "../utils/tokenManager";
 import "react-toastify/dist/ReactToastify.css";
 
 const SignupPage = () => {
@@ -32,9 +33,11 @@ const SignupPage = () => {
         toast.success("✅ Signup successful! Redirecting...", { autoClose: 2000 });
         setTimeout(() => navigate("/login"), 2000);
       } else {
+        clearTokens();
         toast.error(data.error || "Signup failed. Try again.");
       }
     } catch (err) {
+      clearTokens();
       toast.error("🚨 Server error. Please try again.");
     } finally {
       setLoading(false); // ✅ Stop loading after request

@@ -98,8 +98,8 @@ class PromptListCreateView(APIView):
         )
 
         # Build chat history for each model
-        # For each model, collect all previous user/model messages in order
-        all_messages = PromptMessage.objects.filter(chat_session=chat_session).order_by('created_at')
+        # For each model, collect all previous user/model messages in order, EXCLUDING the current prompt_message
+        all_messages = PromptMessage.objects.filter(chat_session=chat_session).exclude(id=prompt_message.id).order_by('created_at')
         responses = {}
         model_map = {
             "openai": {
@@ -127,13 +127,16 @@ class PromptListCreateView(APIView):
             provider = model.get("provider", "openai")
             label = model.get("label")
             try:
-                # Build chat history for this model using ChatHistory object
+                # Build chat history for this model using ChatHistory object, only previous messages
                 chat_history = ChatHistory()
                 for msg in all_messages:
                     chat_history.add_user_message(msg.content)
                     model_responses = msg.model_responses.filter(model_label=label, provider=provider)
                     for r in model_responses:
                         chat_history.add_assistant_message(r.response_content)
+
+                # Add the current user prompt (but NOT its response yet)
+                chat_history.add_user_message(prompt_text)
 
                 # Call model with full chat history
                 if provider == "openai":

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
+import { clearTokens } from "../utils/tokenManager";
 
 const Navbar = ({ user: userProp, setUser: setUserProp }) => {
   const location = useLocation();
@@ -46,9 +47,7 @@ const Navbar = ({ user: userProp, setUser: setUserProp }) => {
 
   // ✅ Logout logic
   const handleLogout = () => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    localStorage.removeItem("user");
+    clearTokens();
     updateUser(null);
     setMenuOpen(false);
     navigate("/login");
