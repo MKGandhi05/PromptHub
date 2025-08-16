@@ -1,5 +1,5 @@
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
-// import { motion } from 'framer-motion';
+import { getAccessToken, refreshAccessToken, setAccessToken } from "../utils/tokenManager";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import '@fontsource/inter/700.css';
@@ -7,6 +7,20 @@ import '@fontsource/inter/400.css';
 
 // ✅ ResponseGrid moved outside to prevent unnecessary re-renders
 const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
+  // For auto-scroll to bottom per model
+  const scrollRefs = React.useRef({});
+
+  React.useEffect(() => {
+    if (!chatHistory || !Array.isArray(chatHistory)) return;
+    selectedModels.forEach(m => {
+      const modelId = `${m.provider}-${m.label}`;
+      const el = scrollRefs.current[modelId];
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, [chatHistory, loading, selectedModels]);
+
   const chunkModels = (models) => {
     const total = models.length;
     if (total <= 3) return [models];
@@ -61,6 +75,7 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
                 </div>
                 {/* Chat history area with scrollable custom scrollbar */}
                 <div
+                  ref={el => (scrollRefs.current[modelId] = el)}
                   className="flex-1 custom-scrollbar mb-2"
                   style={{
                     height: isSingleRow ? '320px' : '180px',
@@ -77,8 +92,18 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
                 >
                   {filteredMessages.length > 0 ? (
                     filteredMessages.map((msg, idx) => (
-                      <div key={idx} className={msg.role === 'user' ? 'text-right' : 'text-left'} style={{marginBottom: 8}}>
-                        <span className={msg.role === 'user' ? 'bg-blue-100 text-blue-800 rounded-lg px-3 py-1 inline-block' : 'bg-gray-100 text-gray-800 rounded-lg px-3 py-1 inline-block'}>
+                      <div
+                        key={idx}
+                        className={`fade-in-message ${msg.role === 'user' ? 'text-right' : 'text-left'}`}
+                        style={{marginBottom: 8, animationDelay: `${idx * 40}ms`}}
+                      >
+                        <span
+                          className={
+                            msg.role === 'user'
+                              ? 'chat-bubble-user'
+                              : 'chat-bubble-assistant'
+                          }
+                        >
                           {msg.role === 'assistant' ? <RenderResponse text={msg.content} /> : msg.content}
                         </span>
                       </div>
@@ -99,7 +124,7 @@ const ResponseGrid = ({ selectedModels, responses, loading, chatHistory }) => {
           })}
         </div>
       ))}
-    </div>
+    </div>  
   );
 };
 
@@ -324,17 +349,22 @@ export default function PlaygroundSession({ selectedModels }) {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    // Fetch user stats on mount
+    // Fetch user stats on mount, with token refresh logic
     const fetchStats = async () => {
-      const accessToken = localStorage.getItem('access');
+      let accessToken = getAccessToken();
       if (!accessToken) return;
       try {
-        const res = await fetch('http://localhost:8000/api/userstats/', {
+        let res = await fetch('http://localhost:8000/api/userstats/', {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
+        if (res.status === 401) {
+          accessToken = await refreshAccessToken();
+          res = await fetch('http://localhost:8000/api/userstats/', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+        }
         if (res.ok) {
           const data = await res.json();
-          // setFreeTrials(data.remaining_free_trials);
           setCredits(data.available_credits);
         }
       } catch {}
@@ -382,19 +412,19 @@ export default function PlaygroundSession({ selectedModels }) {
     // setSelectedModels([...selectedModels]);
   }, [selectedModels]);
 
-  // Update handleSend for multi-turn
+  // Update handleSend for multi-turn, with token refresh logic
   const handleSend = async (e) => {
     if (e) e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const accessToken = localStorage.getItem('access');
+      let accessToken = getAccessToken();
       const payload = {
         text: prompt,
         models: selectedModels,
       };
       if (sessionId) payload.session_id = sessionId;
-      const res = await fetch('http://localhost:8000/api/prompts/', {
+      let res = await fetch('http://localhost:8000/api/prompts/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,6 +432,18 @@ export default function PlaygroundSession({ selectedModels }) {
         },
         body: JSON.stringify(payload)
       });
+      // If token expired, try refresh
+      if (res.status === 401) {
+        accessToken = await refreshAccessToken();
+        res = await fetch('http://localhost:8000/api/prompts/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
+      }
       if (!res.ok) throw new Error('Failed to fetch response');
       const data = await res.json();
       setResponses(data.responses || {});
@@ -553,16 +595,69 @@ export default function PlaygroundSession({ selectedModels }) {
                 background: #e0e7ef;
                 border-radius: 6px;
               }
+
+              /* Chat bubble styling */
+              .chat-bubble-user {
+                background: linear-gradient(135deg, #60a5fa 40%, #2563eb 100%);
+                color: #fff;
+                border-radius: 18px 18px 4px 18px;
+                padding: 8px 16px;
+                display: inline-block;
+                font-weight: 600;
+                box-shadow: 0 2px 8px #60a5fa22;
+                margin-left: 32px;
+                margin-right: 0;
+                font-size: 1rem;
+                letter-spacing: 0.01em;
+                transition: background 0.18s;
+              }
+              .chat-bubble-assistant {
+                background: #f1f5f9;
+                color: #1e293b;
+                border-radius: 18px 18px 18px 4px;
+                padding: 8px 16px;
+                display: inline-block;
+                font-weight: 500;
+                box-shadow: 0 2px 8px #2563eb11;
+                margin-right: 32px;
+                margin-left: 0;
+                font-size: 1rem;
+                letter-spacing: 0.01em;
+                transition: background 0.18s;
+              }
+
+              /* Fade-in animation for messages */
+              .fade-in-message {
+                opacity: 0;
+                animation: fadeInMsg 0.5s forwards;
+              }
+              @keyframes fadeInMsg {
+                from { opacity: 0; transform: translateY(12px); }
+                to { opacity: 1; transform: none; }
+              }
+
+              /* Animated send button */
+              .send-btn-animate {
+                transition: transform 0.15s, box-shadow 0.15s;
+              }
+              .send-btn-animate:active {
+                transform: scale(0.92) rotate(-6deg);
+                box-shadow: 0 2px 16px #2563eb55;
+              }
+              .send-btn-animate:hover {
+                transform: scale(1.08) rotate(3deg);
+                box-shadow: 0 4px 24px #2563eb55;
+              }
             `}</style>
             <button
               type="button"
-              className="absolute top-1/2 right-4 transform -translate-y-1/2 rounded-full p-2 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ height: '2.5rem', width: '2.5rem', background: 'none', boxShadow: 'none' }}
+              className="absolute top-1/2 right-4 transform -translate-y-1/2 rounded-full p-2 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 send-btn-animate"
+              style={{ height: '2.5rem', width: '2.5rem', background: 'linear-gradient(135deg, #60a5fa 40%, #2563eb 100%)', boxShadow: '0 2px 8px #2563eb33', transition: 'transform 0.15s, box-shadow 0.15s' }}
               aria-label="Send"
               onClick={handleSend}
               disabled={selectedModels.length === 0 || !prompt.trim() || loading}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-600 hover:text-blue-700 transition-colors duration-150">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white transition-colors duration-150">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l10 1.5-10 1.5v6z" />
               </svg>
             </button>
