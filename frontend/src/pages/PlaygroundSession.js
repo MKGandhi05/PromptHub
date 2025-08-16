@@ -1,4 +1,5 @@
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getAccessToken, refreshAccessToken, setAccessToken } from "../utils/tokenManager";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -328,7 +329,7 @@ function CodeBlockWithCopy({ code, language }) {
   );
 }
 
-export default function PlaygroundSession({ selectedModels }) {
+export default function PlaygroundSession({ selectedModels, sessionIdFromUrl }) {
   // If coming from history, prefill prompt
   const [prompt, setPrompt] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -344,8 +345,28 @@ export default function PlaygroundSession({ selectedModels }) {
   const [showInput, setShowInput] = useState(false);
   const [freeTrials, setFreeTrials] = useState(null);
   const [credits, setCredits] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
+  const navigate = useNavigate();
+  const { sessionId: sessionIdParam } = useParams();
+  const [sessionId, setSessionId] = useState(sessionIdFromUrl || sessionIdParam || null);
   const [chatHistory, setChatHistory] = useState([]); // [{role, content, modelId}]
+  // Fetch chat history if sessionId is present in URL on mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!sessionId) return;
+      let accessToken = getAccessToken();
+      try {
+        const res = await fetch(`http://localhost:8000/api/prompts/${sessionId}/responses/`, {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Assuming backend returns an array of messages with role/content/modelId
+          setChatHistory(data);
+        }
+      } catch {}
+    };
+    if (sessionId) fetchHistory();
+  }, [sessionId]);
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -447,7 +468,13 @@ export default function PlaygroundSession({ selectedModels }) {
       if (!res.ok) throw new Error('Failed to fetch response');
       const data = await res.json();
       setResponses(data.responses || {});
-      if (data.session_id) setSessionId(data.session_id);
+      if (data.session_id) {
+        setSessionId(data.session_id);
+        // If sessionId was not present, update URL
+        if (!sessionId) {
+          navigate(`/playground/session/${data.session_id}`, { replace: true });
+        }
+      }
       if (data.available_credits !== undefined) setCredits(data.available_credits);
       // Update chat history
       setChatHistory(prev => [

@@ -178,8 +178,32 @@ class PromptListCreateView(APIView):
 
 class PromptResponseListView(APIView):
     def get(self, request, prompt_id):
-        # Since stateless, we return empty or dummy responses
-        return Response([], status=status.HTTP_200_OK)
+        user = request.user
+        try:
+            chat_session = ChatSession.objects.get(id=prompt_id, user=user)
+        except ChatSession.DoesNotExist:
+            return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get all messages in order
+        messages = PromptMessage.objects.filter(chat_session=chat_session).order_by('created_at')
+        chat_history = []
+        for msg in messages:
+            # Add user message
+            if msg.sender == 'user':
+                chat_history.append({
+                    'role': 'user',
+                    'content': msg.content,
+                    'created_at': msg.created_at,
+                })
+            # Add all model responses for this message
+            for r in msg.model_responses.all():
+                chat_history.append({
+                    'role': 'assistant',
+                    'content': r.response_content,
+                    'modelId': f"{r.provider}-{r.model_label}",
+                    'created_at': r.created_at,
+                })
+        return Response(chat_history, status=status.HTTP_200_OK)
 
 # ----------------- REGISTER -----------------
 class RegisterView(APIView):

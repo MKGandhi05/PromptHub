@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
 import './App.css';
 import LandingPage from './pages/LandingPage';
 import Playground from './pages/Playground';
@@ -71,7 +71,7 @@ export default function App() {
                 <Playground />
               </div>
             } />
-            <Route path="/playground/session" element={
+            <Route path="/playground/session/:sessionId?" element={
               <div>
                 <PlaygroundSessionWrapper />
               </div>
@@ -93,5 +93,6 @@ function PlaygroundSessionWrapper() {
   } catch {
     selectedModels = [];
   }
-  return <PlaygroundSession selectedModels={selectedModels} />;
+  const { sessionId } = useParams();
+  return <PlaygroundSession selectedModels={selectedModels} sessionIdFromUrl={sessionId} />;
 }
