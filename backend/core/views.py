@@ -22,11 +22,14 @@ class ComparisonHistoryView(APIView):
         sessions = ChatSession.objects.filter(user=user).order_by('-started_at')[:20]
         history = []
         for session in sessions:
-            for msg in session.messages.all():
-                responses = ModelResponse.objects.filter(prompt_message=msg)
+            # Get the first user message in this session
+            first_msg = session.messages.filter(sender='user').order_by('created_at').first()
+            if first_msg:
+                responses = ModelResponse.objects.filter(prompt_message=first_msg)
                 history.append({
-                    "prompt": msg.content,
-                    "created_at": msg.created_at,
+                    "prompt": first_msg.content,
+                    "created_at": first_msg.created_at,
+                    "session_id": str(session.id),
                     "models": [
                         {
                             "model_label": r.model_label,
