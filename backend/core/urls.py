@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('prompts/', PromptListCreateView.as_view(), name='prompt-list-create'),
-    path('prompts/<int:prompt_id>/responses/', PromptResponseListView.as_view(), name='prompt-responses'),
+    path('prompts/<uuid:prompt_id>/responses/', PromptResponseListView.as_view(), name='prompt-responses'),
 
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),

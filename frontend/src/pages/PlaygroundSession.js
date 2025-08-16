@@ -347,7 +347,7 @@ export default function PlaygroundSession({ selectedModels, sessionIdFromUrl }) 
   const [credits, setCredits] = useState(null);
   const navigate = useNavigate();
   const { sessionId: sessionIdParam } = useParams();
-  const [sessionId, setSessionId] = useState(sessionIdFromUrl || sessionIdParam || null);
+  const [sessionId, setSessionId] = useState(sessionIdFromUrl || sessionIdParam || null); // sessionId is a string (UUID)
   const [chatHistory, setChatHistory] = useState([]); // [{role, content, modelId}]
   // Fetch chat history if sessionId is present in URL on mount
   useEffect(() => {
@@ -444,7 +444,7 @@ export default function PlaygroundSession({ selectedModels, sessionIdFromUrl }) 
         text: prompt,
         models: selectedModels,
       };
-      if (sessionId) payload.session_id = sessionId;
+  if (sessionId) payload.session_id = sessionId; // pass as string
       let res = await fetch('http://localhost:8000/api/prompts/', {
         method: 'POST',
         headers: {

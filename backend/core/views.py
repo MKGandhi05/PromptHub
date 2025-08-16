@@ -63,7 +63,7 @@ class PromptListCreateView(APIView):
         if session_id:
             try:
                 chat_session = ChatSession.objects.get(id=session_id, user=user)
-            except ChatSession.DoesNotExist:
+            except (ChatSession.DoesNotExist, ValueError):
                 return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
             # Use previous model selection
             if not selected_models:
@@ -181,7 +181,7 @@ class PromptResponseListView(APIView):
         user = request.user
         try:
             chat_session = ChatSession.objects.get(id=prompt_id, user=user)
-        except ChatSession.DoesNotExist:
+        except (ChatSession.DoesNotExist, ValueError):
             return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Get all messages in order
